@@ -6,7 +6,7 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function validateNewIssue(body) {
   const errors = {};
-  const { nic, email, category, ward, landmark, description } = body;
+  const { nic, email, category, ward, landmark, description, latitude, longitude } = body;
 
   if (!nic || !isValidNic(nic)) {
     errors.nic = 'Please enter a valid NIC number: either 9 digits followed by V/X, or 12 digits.';
@@ -25,6 +25,12 @@ export function validateNewIssue(body) {
   }
   if (!description || description.trim().length < 20) {
     errors.description = 'Description must be at least 20 characters so engineers have enough detail.';
+  }
+  if (latitude !== undefined && latitude !== '' && (isNaN(Number(latitude)) || Number(latitude) < -90 || Number(latitude) > 90)) {
+    errors.latitude = 'GPS latitude looks invalid. Please retag your location.';
+  }
+  if (longitude !== undefined && longitude !== '' && (isNaN(Number(longitude)) || Number(longitude) < -180 || Number(longitude) > 180)) {
+    errors.longitude = 'GPS longitude looks invalid. Please retag your location.';
   }
 
   return errors;

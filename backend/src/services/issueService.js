@@ -2,7 +2,7 @@ import { supabaseAdmin } from '../lib/supabaseClient.js';
 import { AppError } from '../utils/AppError.js';
 
 const PUBLIC_COLUMNS =
-  'id, category, ward, landmark, description, photo_url, status, ai_priority, ai_department, ai_reason, created_at';
+  'id, category, ward, landmark, description, photo_url, latitude, longitude, status, ai_priority, ai_department, ai_reason, created_at';
 const FULL_COLUMNS = `${PUBLIC_COLUMNS}, citizen_id, updated_at`;
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -24,7 +24,17 @@ function applyFilters(query, { category, status, search }) {
   return result;
 }
 
-export async function createIssue({ citizenId, category, ward, landmark, description, photoUrl, triage }) {
+export async function createIssue({
+  citizenId,
+  category,
+  ward,
+  landmark,
+  description,
+  photoUrl,
+  latitude,
+  longitude,
+  triage,
+}) {
   const { data, error } = await supabaseAdmin
     .from('civic_issues')
     .insert({
@@ -34,6 +44,8 @@ export async function createIssue({ citizenId, category, ward, landmark, descrip
       landmark,
       description,
       photo_url: photoUrl,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
       ai_priority: triage.priority,
       ai_department: triage.department,
       ai_reason: triage.reason,

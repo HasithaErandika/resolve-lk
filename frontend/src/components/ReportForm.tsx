@@ -16,15 +16,25 @@ const INITIAL_VALUES: ReportFormValues = {
 }
 
 type SubmitState = 'idle' | 'submitting' | 'success'
+type LocationStatus = 'idle' | 'locating' | 'tagged' | 'error'
+
+interface Coordinates {
+  lat: number
+  lng: number
+}
 
 export function ReportForm() {
   const [values, setValues] = useState<ReportFormValues>(INITIAL_VALUES)
+  const [otherWard, setOtherWard] = useState('')
   const [errors, setErrors] = useState<ReportFormErrors>({})
   const [photoName, setPhotoName] = useState<string | null>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [state, setState] = useState<SubmitState>('idle')
   const [points, setPoints] = useState(0)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [location, setLocation] = useState<Coordinates | null>(null)
+  const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle')
+  const [locationError, setLocationError] = useState<string | null>(null)
 
   function handleChange(field: keyof ReportFormValues) {
     return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -33,7 +43,10 @@ export function ReportForm() {
   }
 
   function setField(field: keyof ReportFormValues) {
-    return (value: string) => setValues((prev) => ({ ...prev, [field]: value }))
+    return (value: string) => {
+      setValues((prev) => ({ ...prev, [field]: value }))
+      if (field === 'ward' && value !== 'Other') setOtherWard('')
+    }
   }
 
   function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
@@ -42,9 +55,53 @@ export function ReportForm() {
     setPhotoName(file?.name ?? null)
   }
 
+  function tagCurrentLocation() {
+    if (!navigator.geolocation) {
+      setLocationStatus('error')
+      setLocationError('Location services are not available in this browser.')
+      return
+    }
+
+    setLocationStatus('locating')
+    setLocationError(null)
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocation({ lat: position.coords.latitude, lng: position.coords.longitude })
+        setLocationStatus('tagged')
+      },
+      (error) => {
+        setLocationStatus('error')
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationError('Location access was denied. You can still submit without it.')
+        } else if (error.code === error.TIMEOUT) {
+          setLocationError('Could not get a location fix in time. Please try again.')
+        } else {
+          setLocationError('Could not determine your location. Please try again.')
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  function clearLocation() {
+    setLocation(null)
+    setLocationStatus('idle')
+    setLocationError(null)
+  }
+
+  function effectiveWard() {
+    return values.ward === 'Other' ? otherWard.trim() : values.ward
+  }
+
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    const validationErrors = validateReportForm(values)
+
+    const candidate: ReportFormValues = { ...values, ward: effectiveWard() }
+    const validationErrors = validateReportForm(candidate)
+    if (values.ward === 'Other' && !otherWard.trim()) {
+      validationErrors.ward = 'Please specify your ward/zone.'
+    }
     setErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) return
 
@@ -55,10 +112,14 @@ export function ReportForm() {
     formData.append('nic', values.nic.trim())
     formData.append('email', values.email.trim())
     formData.append('category', values.category)
-    formData.append('ward', values.ward)
+    formData.append('ward', candidate.ward)
     formData.append('landmark', values.landmark)
     formData.append('description', values.description)
     if (photoFile) formData.append('photo', photoFile)
+    if (location) {
+      formData.append('latitude', String(location.lat))
+      formData.append('longitude', String(location.lng))
+    }
 
     try {
       const res = await fetch(`${API_BASE_URL}/api/issues`, {
@@ -84,10 +145,12 @@ export function ReportForm() {
 
   function reportAnother() {
     setValues(INITIAL_VALUES)
+    setOtherWard('')
     setErrors({})
     setPhotoName(null)
     setPhotoFile(null)
     setSubmitError(null)
+    clearLocation()
     setState('idle')
   }
 
@@ -126,9 +189,10 @@ export function ReportForm() {
               value={values.nic}
               onChange={handleChange('nic')}
               type="text"
-              placeholder="200112345678"
+              placeholder="200112345678 or 720890283V"
               className={inputClass(Boolean(errors.nic))}
             />
+            <p className="mt-1 text-xs text-bark/40">Old format: 9 digits + V/X (720890283V). New format: 12 digits (200112345678).</p>
           </Field>
           <Field label="Email" htmlFor="email" error={errors.email}>
             <input
@@ -153,7 +217,7 @@ export function ReportForm() {
               hasError={Boolean(errors.category)}
             />
           </Field>
-          <Field label="Ward / Zone" htmlFor="ward" error={errors.ward}>
+          <Field label="Ward / Zone" htmlFor="ward" error={values.ward !== 'Other' ? errors.ward : undefined}>
             <SearchableSelect
               id="ward"
               value={values.ward}
@@ -162,6 +226,18 @@ export function ReportForm() {
               placeholder="Select a ward/zone"
               hasError={Boolean(errors.ward)}
             />
+            {values.ward === 'Other' && (
+              <div className="mt-2">
+                <input
+                  value={otherWard}
+                  onChange={(e) => setOtherWard(e.target.value)}
+                  type="text"
+                  placeholder="Type your ward/zone"
+                  className={inputClass(Boolean(errors.ward))}
+                />
+                {errors.ward && <p className="mt-1 text-xs font-medium text-maple">{errors.ward}</p>}
+              </div>
+            )}
           </Field>
         </div>
 
@@ -175,6 +251,49 @@ export function ReportForm() {
             className={inputClass(Boolean(errors.landmark))}
           />
         </Field>
+
+        <div>
+          <label className="block text-sm font-medium text-bark">GPS location (optional)</label>
+          <div className="mt-1">
+            {locationStatus === 'tagged' && location ? (
+              <div className="flex items-center justify-between rounded-lg border border-fern/30 bg-fern/5 px-3 py-2.5 text-sm">
+                <span className="flex items-center gap-2 text-fern">
+                  <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="currentColor">
+                    <path
+                      fillRule="evenodd"
+                      d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Location tagged ({location.lat.toFixed(5)}, {location.lng.toFixed(5)})
+                </span>
+                <button type="button" onClick={clearLocation} className="text-xs font-semibold text-bark/50 hover:text-maple">
+                  Remove
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={tagCurrentLocation}
+                disabled={locationStatus === 'locating'}
+                className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-bark/20 bg-white px-4 py-3 text-sm font-medium text-bark/70 transition hover:border-pumpkin/40 hover:text-pumpkin disabled:opacity-60"
+              >
+                <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor">
+                  <path
+                    fillRule="evenodd"
+                    d="M9.69 18.933l.003.001C9.89 19.02 10 19 10 19s.11.02.308-.066l.002-.001.006-.003.018-.008a5.741 5.741 0 00.281-.14c.186-.096.446-.24.757-.433.62-.384 1.445-.966 2.274-1.765C15.302 14.988 17 12.493 17 9A7 7 0 103 9c0 3.492 1.698 5.988 3.355 7.584a13.731 13.731 0 002.273 1.765 11.842 11.842 0 00.976.544l.062.029.018.008.006.003zM10 11.25a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                {locationStatus === 'locating' ? 'Getting your location…' : 'Tag my current location'}
+              </button>
+            )}
+            {locationError && <p className="mt-1.5 text-xs font-medium text-maple">{locationError}</p>}
+            <p className="mt-1.5 text-xs text-bark/40">
+              Helps crews pinpoint the exact spot. Never required — the ward and landmark are enough on their own.
+            </p>
+          </div>
+        </div>
 
         <Field label="Description" htmlFor="description" error={errors.description}>
           <textarea
