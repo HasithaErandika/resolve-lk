@@ -4,7 +4,7 @@ Mandatory submission artifact per SE3090 Assignment 2 §2.2. For every **signifi
 
 | # | Time | Member | Tool | Prompt (exact or summarized if long) | Purpose | How output was checked/modified |
 |---|---|---|---|---|---|---|
-| 1 | | | | | | |
+| 1 | Minute 45 | Jayashan Guruge | Antigravity AI | "implmet fronetnd to admin dashbord according to the exist project style" | Built full municipal Admin Dashboard (Supabase Auth, Table & Kanban views, search/filter, status updates, AI triage highlights) | Reviewed for Autumn theme compliance, resolved React 19 fast-refresh & TypeScript type definitions, added demo authentication fallback |
 | 2 | | | | | | |
 | 3 | | | | | | |
 | 4 | | | | | | |
