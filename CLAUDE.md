@@ -66,7 +66,9 @@ Route handlers stay thin — a route file only wires a path to a controller func
 6. **Role check happens server-side.** Any admin-only backend route must verify the caller's Supabase JWT and check `profiles.role = 'admin'` before proceeding. Never trust a role claim sent from the client.
 7. **Photo upload flow (keep it simple):** frontend sends a multipart form directly to `POST /api/issues`; Express uploads the file to R2 using `@aws-sdk/client-s3` (R2 is S3-compatible), then calls Gemini for triage, then inserts the row into Supabase — all in one request/response cycle. Do not build a separate presigned-URL upload step.
 8. **Gemini API key, R2 credentials, and the Supabase service role key live only in backend environment variables.** Never expose them to the frontend bundle.
-9. **Contribution points are a plain counter on `profiles.points`**, updated in application code (`backend/src/lib/citizens.js#awardPoints`): +10 on report submission, +15 bonus when an admin marks a report `Resolved`. Not a DB trigger — kept simple and easy to explain live in the demo.
+9. **Contribution points are a plain counter on `profiles.points`**, updated atomically via the `increment_points` Postgres function (`services/citizenService.js#awardPoints`, called through `supabaseAdmin.rpc(...)`) rather than a read-then-write from Node: +10 on report submission, +15 bonus when an admin marks a report `Resolved`.
+10. **`attachProfile` middleware fetches the caller's profile once per request** (`req.profile`); routes and `requireAdmin` read from it instead of each re-querying `profiles`.
+11. **Listing endpoints (`GET /api/issues`, `GET /api/issues/public`) are paginated** (`page`/`pageSize`, max 100) — never add an unbounded `select('*')` listing query.
 
 Full schema and RLS policies: [`docs/srs/05-data-model.md`](docs/srs/05-data-model.md)
 Full endpoint list: [`docs/srs/06-api-specification.md`](docs/srs/06-api-specification.md)
@@ -112,4 +114,4 @@ See [`docs/srs/07-team-allocation.md`](docs/srs/07-team-allocation.md) for the f
 - **Seneja Thehansi** — Citizen experience: landing page, public feed, report form (no dashboard), My Reports page. Deploys frontend.
 - **Jayashan Guruge** — Admin dashboard: login, table/board, search/filter, status updates.
 - **Bhanuka Samarasinghe** — Supabase (schema, Auth, RLS, seeded admin) + Cloudflare R2 bucket setup.
-- **Hasitha Erandika** — Express backend, R2 upload integration, Gemini API triage integration, points logic, deploys backend. *(Backend is already largely implemented — see `backend/src`.)*
+- **Hasitha Erandika** — Express backend, R2 upload integration, Gemini API triage integration, points logic, deploys backend. *(Backend is fully implemented and verified end-to-end against the live Supabase project — see `backend/src` and `PROGRESS.md`.)*
