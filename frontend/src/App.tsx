@@ -1,8 +1,11 @@
+import { useState, useEffect } from 'react'
 import { Header } from './components/Header'
 import { Footer } from './components/Footer'
 import { IssueCard } from './components/IssueCard'
 import { ReportForm } from './components/ReportForm'
 import { sampleIssues } from './data/sampleIssues'
+import { AdminAuthProvider } from './context/AdminAuthContext'
+import { AdminPortal } from './components/admin/AdminPortal'
 
 const STEPS = [
   {
@@ -32,10 +35,45 @@ const PROBLEM_AREAS = [
   ['Lighting', 'Broken or dark streetlights'],
 ]
 
-function App() {
+function AppContent() {
+  const [view, setView] = useState<'public' | 'admin'>(() =>
+    typeof window !== 'undefined' && window.location.hash.startsWith('#admin')
+      ? 'admin'
+      : 'public'
+  )
+
+  useEffect(() => {
+    function handleHash() {
+      if (window.location.hash.startsWith('#admin')) {
+        setView('admin')
+      } else if (window.location.hash === '' || window.location.hash === '#top' || window.location.hash === '#problem' || window.location.hash === '#feed' || window.location.hash === '#report') {
+        setView('public')
+      }
+    }
+    window.addEventListener('hashchange', handleHash)
+    return () => window.removeEventListener('hashchange', handleHash)
+  }, [])
+
+  function goToAdmin() {
+    window.location.hash = '#admin'
+    setView('admin')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function goToPublic() {
+    window.location.hash = '#top'
+    setView('public')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  if (view === 'admin') {
+    return <AdminPortal onBackToPublic={goToPublic} />
+  }
+
   return (
     <div id="top" className="min-h-screen bg-birch text-bark">
-      <Header />
+      <Header onNavigateAdmin={goToAdmin} />
+
 
       <main>
         {/* Hero */}
@@ -192,4 +230,11 @@ function App() {
   )
 }
 
-export default App
+export default function App() {
+  return (
+    <AdminAuthProvider>
+      <AppContent />
+    </AdminAuthProvider>
+  )
+}
+
