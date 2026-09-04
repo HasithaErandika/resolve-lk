@@ -13,7 +13,7 @@ The landing page shows a live, public feed of reported issues — like a public 
 There is no separate "create an account" step. A citizen fills in one form, directly from the landing page:
 
 - **NIC (National Identity Card) number** — mandatory. This is the one field that establishes identity.
-- **Category** — Garbage, Road, Water, or Lighting
+- **Category** — Garbage, Road, Water, Lighting, Drainage, Sewerage, Public Safety, or Other
 - **Ward/Zone** — dropdown (e.g. Colombo 03, Kandy Central, Dehiwala)
 - **Nearest landmark** — free text
 - **Description** — free text, minimum 20 characters

@@ -5,9 +5,14 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-LK', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export function IssueCard({ issue }: { issue: CivicIssue }) {
+export function IssueCard({ issue, onClick }: { issue: CivicIssue; onClick?: () => void }) {
   return (
-    <article className="flex flex-col rounded-2xl border border-bark/10 bg-white p-5 shadow-sm shadow-bark/5 transition hover:shadow-md hover:shadow-bark/10">
+    <article
+      onClick={onClick}
+      className={`flex flex-col rounded-2xl border border-bark/10 bg-white p-5 shadow-sm shadow-bark/5 transition hover:shadow-md hover:shadow-bark/10 ${
+        onClick ? 'cursor-pointer hover:border-pumpkin/30' : ''
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
         <span className="text-xs font-semibold uppercase tracking-wide text-pumpkin">
           {issue.category}

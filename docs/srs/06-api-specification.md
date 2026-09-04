@@ -25,7 +25,7 @@ There is no `/auth/signup` or `/auth/login` route. Two different things happen i
 |---|---|---|
 | `page` | `1` | 1-indexed |
 | `pageSize` | `20` | clamped to a max of `100` |
-| `category` | — | one of `Garbage`, `Road`, `Water`, `Lighting` |
+| `category` | — | one of `Garbage`, `Road`, `Water`, `Lighting`, `Drainage`, `Sewerage`, `Public Safety`, `Other` |
 | `status` | — | one of `Pending`, `In Progress`, `Resolved` |
 | `search` | — | matches `description`/`landmark` (case-insensitive, backed by a trigram index — see `database/migrations/002...`) |
 
@@ -46,7 +46,7 @@ Response envelope:
   | `nic` | string | yes | Sri Lankan NIC format (old or new) |
   | `email` | string | yes | valid email — used as the Supabase Auth username if this NIC is new |
   | `full_name` | string | no | passed through to the profile if this NIC is new |
-  | `category` | string | yes | one of `Garbage`, `Road`, `Water`, `Lighting` |
+  | `category` | string | yes | one of `Garbage`, `Road`, `Water`, `Lighting`, `Drainage`, `Sewerage`, `Public Safety`, `Other` |
   | `ward` | string | yes | non-empty |
   | `landmark` | string | yes | non-empty |
   | `description` | string | yes | ≥ 20 characters |

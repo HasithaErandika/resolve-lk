@@ -83,7 +83,7 @@ Do this once during setup. Do not build a UI for it.
 create table civic_issues (
   id uuid default gen_random_uuid() primary key,
   citizen_id uuid references auth.users not null,
-  category text not null check (category in ('Garbage', 'Road', 'Water', 'Lighting')),
+  category text not null check (category in ('Garbage', 'Road', 'Water', 'Lighting', 'Drainage', 'Sewerage', 'Public Safety', 'Other')),
   ward text not null,
   landmark text not null,
   description text not null check (char_length(description) >= 20),

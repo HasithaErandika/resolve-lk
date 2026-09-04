@@ -1,4 +1,12 @@
-export type IssueCategory = 'Garbage' | 'Road' | 'Water' | 'Lighting'
+export type IssueCategory =
+  | 'Garbage'
+  | 'Road'
+  | 'Water'
+  | 'Lighting'
+  | 'Drainage'
+  | 'Sewerage'
+  | 'Public Safety'
+  | 'Other'
 export type IssueStatus = 'Pending' | 'In Progress' | 'Resolved'
 export type IssuePriority = 'Low' | 'Medium' | 'Critical'
 
@@ -18,13 +26,22 @@ export interface CivicIssue {
   updatedAt?: string
 }
 
-export const CATEGORIES: IssueCategory[] = ['Garbage', 'Road', 'Water', 'Lighting']
+export const CATEGORIES: IssueCategory[] = [
+  'Garbage',
+  'Road',
+  'Water',
+  'Lighting',
+  'Drainage',
+  'Sewerage',
+  'Public Safety',
+  'Other',
+]
 export const STATUSES: IssueStatus[] = ['Pending', 'In Progress', 'Resolved']
 export const PRIORITIES: IssuePriority[] = ['Low', 'Medium', 'Critical']
 
 /**
- * Normalizes an issue object received from either the Supabase/Express API
- * (snake_case) or local mock data (camelCase) into a consistent CivicIssue structure.
+ * Normalizes an issue object returned by the Express API (snake_case)
+ * into a consistent CivicIssue structure (camelCase).
  */
 export interface RawIssueData {
   id?: unknown

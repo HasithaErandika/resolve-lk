@@ -7,7 +7,7 @@ const LINKS = [
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-40 border-b border-bark/10 bg-birch/90 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-bark/10 bg-white/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
         <Link to="/" className="flex items-center gap-2.5">
           <img src="/resolve-lk-logo.png" alt="" className="h-9 w-9" />

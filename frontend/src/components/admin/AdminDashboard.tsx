@@ -16,22 +16,28 @@ interface ToastMessage {
 }
 
 export function AdminDashboard({ onBackToPublic }: { onBackToPublic: () => void }) {
-  const { user, token, signOut, isDemoMode } = useAdminAuth()
+  const { user, token, signOut } = useAdminAuth()
 
   // Data state
   const [issues, setIssues] = useState<CivicIssue[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isLiveApi, setIsLiveApi] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [selectedIssue, setSelectedIssue] = useState<CivicIssue | null>(null)
   const [isUpdatingId, setIsUpdatingId] = useState<string | null>(null)
 
   // View & Filter states
   const [viewMode, setViewMode] = useState<ViewMode>('table')
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string>('All')
   const [selectedStatus, setSelectedStatus] = useState<string>('All')
   const [selectedPriority, setSelectedPriority] = useState<string>('All')
   const [selectedWard, setSelectedWard] = useState<string>('All')
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search.trim()), 350)
+    return () => clearTimeout(timer)
+  }, [search])
 
   // Toast notifications
   const [toasts, setToasts] = useState<ToastMessage[]>([])
@@ -44,71 +50,45 @@ export function AdminDashboard({ onBackToPublic }: { onBackToPublic: () => void 
     }, 4000)
   }, [])
 
-  // Synchronize issues with backend / mock API
-  useEffect(() => {
-    let ignore = false
-
-    async function syncIssues() {
-      setIsLoading(true)
-      const filters: IssueFilters = {
-        category: selectedCategory,
-        status: selectedStatus,
-        priority: selectedPriority,
-        ward: selectedWard,
-        search: search,
-      }
-      const { issues: fetched, isLive } = await fetchAdminIssues(token, filters)
-      if (!ignore) {
-        setIssues(fetched)
-        setIsLiveApi(isLive)
-        setIsLoading(false)
-      }
-    }
-
-    void syncIssues()
-
-    return () => {
-      ignore = true
-    }
-  }, [token, selectedCategory, selectedStatus, selectedPriority, selectedWard, search])
-
-  // Manual refresh callback
-  const refreshIssues = useCallback(async () => {
-    setIsLoading(true)
-    const filters: IssueFilters = {
+  const currentFilters: IssueFilters = useMemo(
+    () => ({
       category: selectedCategory,
       status: selectedStatus,
       priority: selectedPriority,
       ward: selectedWard,
-      search: search,
-    }
-    const { issues: fetched, isLive } = await fetchAdminIssues(token, filters)
-    setIssues(fetched)
-    setIsLiveApi(isLive)
-    setIsLoading(false)
-  }, [token, selectedCategory, selectedStatus, selectedPriority, selectedWard, search])
+      search: debouncedSearch,
+    }),
+    [selectedCategory, selectedStatus, selectedPriority, selectedWard, debouncedSearch]
+  )
 
-  // Handle status update
+  const loadIssues = useCallback(async () => {
+    if (!token) return
+    setIsLoading(true)
+    const { issues: fetched, error } = await fetchAdminIssues(token, currentFilters)
+    setIssues(fetched)
+    setLoadError(error ?? null)
+    setIsLoading(false)
+  }, [token, currentFilters])
+
+  useEffect(() => {
+    void loadIssues()
+  }, [loadIssues])
+
   async function handleStatusUpdate(issueId: string, newStatus: IssueStatus) {
+    if (!token) return
     setIsUpdatingId(issueId)
-    const { success, updatedIssue, error } = await updateIssueStatus(
-      issueId,
-      newStatus,
-      token
-    )
+    const { success, updatedIssue, error } = await updateIssueStatus(issueId, newStatus, token)
     setIsUpdatingId(null)
 
     if (success && updatedIssue) {
-      setIssues((prev) =>
-        prev.map((item) => (item.id === issueId ? updatedIssue : item))
-      )
+      setIssues((prev) => prev.map((item) => (item.id === issueId ? updatedIssue : item)))
       if (selectedIssue && selectedIssue.id === issueId) {
         setSelectedIssue(updatedIssue)
       }
 
       if (newStatus === 'Resolved') {
         addToast(
-          `Issue #${issueId.slice(0, 6)} resolved! Reporting citizen awarded +15 bonus points.`,
+          `Issue #${issueId.slice(0, 6)} resolved. Reporting citizen awarded +15 bonus points.`,
           'success'
         )
       } else {
@@ -191,7 +171,7 @@ export function AdminDashboard({ onBackToPublic }: { onBackToPublic: () => void 
                 </span>
               </div>
               <p className="text-[11px] text-bark/50 hidden sm:block">
-                Municipal Council Operations &amp; Issue Dispatch
+                Municipal Council Operations and Issue Dispatch
               </p>
             </div>
           </div>
@@ -239,21 +219,13 @@ export function AdminDashboard({ onBackToPublic }: { onBackToPublic: () => void 
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-bark/10 bg-white px-4 py-3 shadow-xs">
           <div className="flex items-center gap-2.5">
             <span
-              className={`h-2.5 w-2.5 rounded-full ${
-                isLiveApi ? 'bg-fern animate-pulse' : 'bg-golden'
-              }`}
+              className={`h-2.5 w-2.5 rounded-full ${loadError ? 'bg-maple' : 'bg-fern animate-pulse'}`}
             />
             <span className="text-xs font-medium text-bark/80">
-              {isLiveApi ? (
-                <span>
-                  Backend Connected to Express (Port 8787) · Authenticated via Supabase JWT
-                </span>
-              ) : isDemoMode ? (
-                <span>
-                  <strong>Demo Mode Active</strong> · Using local verified municipal seed data
-                </span>
+              {loadError ? (
+                <span className="text-maple">{loadError}</span>
               ) : (
-                <span>Local Development Mode</span>
+                <span>Connected to Resolve LK API</span>
               )}
             </span>
           </div>
@@ -300,9 +272,6 @@ export function AdminDashboard({ onBackToPublic }: { onBackToPublic: () => void 
               >
                 Critical Alert
               </span>
-              {stats.critical > 0 && (
-                <span className="flex h-2 w-2 rounded-full bg-maple animate-ping" />
-              )}
             </div>
             <div className="mt-2 flex items-baseline justify-between">
               <span
@@ -417,7 +386,7 @@ export function AdminDashboard({ onBackToPublic }: { onBackToPublic: () => void 
                     }`}
                   >
                     <svg viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor">
-                      <path d="M2 3.75A.75.75 0 012.75 3h3.5a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-3.5a.75.75 0 01-.75-.75V3.75zm6.5 0a.75.75 0 01.75-.75h3.5a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-3.5a.75.75 0 01-.75-.75V3.75zm7.25-.75a.75.75 0 00-.75.75v12.5a.75.75 0 00.75.75h3.5a.75.75 0 00.75-.75V3.75a.75.75 0 00-.75-.75h-3.5z" />
+                      <path d="M2 3.75A.75.75 0 012.75 3h3.5a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-3.5a.75.75 0 01-.75-.75V3.75zm6.5 0a.75.75 0 01.75-.75h3.5a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-3.5a.75.75 0 01-.75-.75V3.75zm7.25-.75a.75.75 0 00-.75.75v12.5a.75.75 0 00.75.75h3.5a.75.75 0 00.75-.75V3.75a.75.75 0 00-.75-.75z" />
                     </svg>
                     Kanban
                   </button>
@@ -425,7 +394,7 @@ export function AdminDashboard({ onBackToPublic }: { onBackToPublic: () => void 
 
                 <button
                   type="button"
-                  onClick={refreshIssues}
+                  onClick={loadIssues}
                   title="Refresh Issues"
                   className="rounded-xl border border-bark/15 bg-white p-2.5 text-bark/60 hover:border-pumpkin hover:text-pumpkin transition shadow-xs"
                 >
