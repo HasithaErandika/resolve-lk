@@ -31,30 +31,37 @@ Reminder: admins never self-register. Admin accounts are created manually in the
 
 | Task | Status | Notes |
 |---|---|---|
-| Create Supabase project | Not Started | |
-| Run `backend/database/schema.sql` | Not Started | `profiles` (nic, points, role), `civic_issues`, trigger, RLS |
-| Configure Supabase Auth | Not Started | Email/password; confirm metadata → `profiles` trigger works for both self-provisioned citizens and manually created admins |
+| Create Supabase project | Done | Connected and verified working |
+| Run `backend/database/migrations/001` and `002` | Done | `profiles` (nic, points, role), `civic_issues`, triggers, RLS, `increment_points` RPC, search indexes — all verified live |
+| Configure Supabase Auth | Done | Metadata → `profiles` trigger confirmed working for backend-provisioned citizens |
 | Seed the one admin test account | Not Started | Create user in Supabase dashboard manually, then `update profiles set role = 'admin' ...` — no self-registration |
 | Create & configure Cloudflare R2 bucket | Done | Bucket `resolve-lk` created, public r2.dev access enabled, credentials handed to Hasitha and verified with a live test upload |
 | Run `backend/database/seed.sql` | Not Started | So the feed/dashboard aren't empty for the demo |
-| Verify RLS with both roles | Not Started | Polish phase |
+| Verify RLS with both roles | Done | Verified at the application layer during backend end-to-end testing — cross-citizen access correctly 404s, non-admin PATCH correctly 403s |
 
 ## Hasitha Erandika — Backend & AI Integration
 
+**Status: implemented, restructured, and verified end-to-end against the live Supabase project.**
+
+Layered architecture — `routes/` (wiring only) → `controllers/` (request/response) → `services/` (business logic) → `lib/` (external clients: Supabase, R2, Gemini). Shared concerns in `middleware/`, `utils/`, `config/`. Full OpenAPI spec in `src/docs/openapi.js`, served live at `/api-docs`.
+
 | Task | Status | Notes |
 |---|---|---|
-| Express project skeleton | Done | `backend/src/index.js` + folder structure |
-| `POST /api/issues` (public, find-or-create by NIC, upload, triage, insert, award points) | Done | `backend/src/routes/issues.js` |
-| `GET /api/issues/public` (anonymous feed) | Done | |
-| `GET /api/issues`, `GET /api/issues/:id`, `PATCH /api/issues/:id/status` | Done | Points bonus on Resolved implemented |
-| `POST /api/my-reports/login` (NIC-only sign-in) | Done | `backend/src/routes/myReports.js` |
-| R2 upload integration | Done | `backend/src/lib/r2.js` |
-| Gemini API triage integration | Done | `backend/src/lib/gemini.js`, with fallback on failure |
-| `requireAuth` / `requireAdmin` middleware | Done | |
+| Express project skeleton, layered structure | Done | `backend/src/{app,server}.js`, `routes/`, `controllers/`, `services/`, `lib/`, `middleware/`, `utils/`, `config/` |
+| `POST /api/issues` (public, find-or-create by NIC, upload, triage, insert, award points) | Done | `controllers/issuesController.js` + `services/citizenService.js`/`issueService.js` |
+| `GET /api/issues/public` (anonymous feed, paginated + filterable) | Done | |
+| `GET /api/issues`, `GET /api/issues/:id`, `PATCH /api/issues/:id/status` | Done | Paginated; points bonus on Resolved; malformed `:id` now rejected with 400 instead of leaking a raw DB error |
+| `POST /api/my-reports/login` (NIC-only sign-in) | Done | `controllers/myReportsController.js` |
+| R2 upload integration | Done | `services/storageService.js`, verified with a live upload |
+| Gemini API triage integration | Done | `services/triageService.js`, model `gemini-3.1-flash-lite` (cheap/stable tier), with fallback on failure |
+| Atomic contribution-points increment | Done | Postgres `increment_points` RPC (`database/migrations/002...`) instead of read-then-write — no race under concurrent submissions |
+| `requireAuth` / `attachProfile` / `requireAdmin` middleware | Done | Profile fetched once per request via `attachProfile`, not re-queried per route |
+| Centralized error handling | Done | `AppError` + `errorHandler` — consistent `{error, errors}` shape everywhere, including Multer errors |
+| Swagger / OpenAPI docs | Done | `GET /api-docs` |
 | Connect real R2 credentials in `.env` | Done | Verified with a live upload — `PUT` succeeded and the resulting URL returned `200 OK` publicly |
-| Connect real Supabase credentials in `.env` | Not Started | Blocked on Bhanuka's Supabase project (URL + anon key + service role key needed) |
-| Connect real Gemini API key in `.env` | Not Started | Need a key from [Google AI Studio](https://aistudio.google.com/apikey) |
-| Smoke-test every route against the live Supabase project | Not Started | Blocked on Supabase credentials above |
+| Connect real Supabase credentials in `.env` | Done | Bhanuka's project connected and migrations 001+002 applied |
+| Connect real Gemini API key in `.env` | Done | Verified with a live triage call |
+| End-to-end verification against the live Supabase project | Done | Full citizen report → AI triage → public feed → My Reports login → admin list/get/status-update/points-bonus → cross-citizen isolation (404) → non-admin PATCH (403) all tested live; two real bugs found and fixed (empty-body crash, malformed-UUID `:id` leaking a raw DB error) — all test data cleaned up afterward |
 | Deploy backend to Choreo (fallback: Render) | Not Started | Ship phase |
 
 ## Shared / whole-team

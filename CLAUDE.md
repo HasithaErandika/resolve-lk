@@ -26,18 +26,35 @@ Rationale and diagrams: [`docs/srs/04-architecture.md`](docs/srs/04-architecture
 ```
 resolve-lk/
 ├── frontend/            # React + Vite + Tailwind app (public landing/feed/report + admin dashboard)
-├── backend/             # Express API
-│   └── database/         # schema.sql, seed.sql (run in the Supabase SQL editor)
+├── backend/
+│   ├── database/
+│   │   ├── migrations/    # 001_init_schema.sql, 002_..., run in order in the Supabase SQL editor
+│   │   └── seed.sql
+│   └── src/
+│       ├── app.js          # Express app construction (no listen)
+│       ├── server.js       # entrypoint — loads env, calls app.listen
+│       ├── config/         # env.js — validates all required env vars at startup
+│       ├── routes/         # route wiring only, no logic
+│       ├── controllers/    # request/response glue
+│       ├── services/       # business logic (citizens, issues, storage, triage)
+│       ├── lib/             # thin external clients (Supabase, R2, Gemini) + nic.js
+│       ├── middleware/      # auth, upload (Multer), errorHandler
+│       ├── validation/      # field-level input validation
+│       ├── utils/           # AppError, asyncHandler
+│       └── docs/            # openapi.js — served live at GET /api-docs
 ├── docs/
 │   ├── srs/               # problem, solution, scope, architecture, data model, API spec, team allocation
 │   └── ai-prompt-log.md
 ├── .github/workflows/    # CI (build/lint checks)
 ├── README.md
 ├── PLAN.md
+├── PROGRESS.md
 └── CLAUDE.md
 ```
 
-`frontend/` and `backend/` are already scaffolded — see their own directories. The backend (routes, middleware, lib) is largely implemented; the frontend currently has a static landing page placeholder (public feed and report form are UI-only, not yet wired to the API).
+`frontend/` and `backend/` are already scaffolded — see their own directories. **The backend is fully implemented and has been verified end-to-end against the live Supabase project** (every endpoint, both roles, real Gemini/R2 calls, cross-citizen isolation, role enforcement — see `PROGRESS.md`). The frontend currently has a static landing page placeholder (public feed and report form are UI-only, not yet wired to the API).
+
+Route handlers stay thin — a route file only wires a path to a controller function; a controller only translates HTTP in/out; all actual logic (Supabase queries, R2 uploads, Gemini calls, point math) lives in `services/`. Any error worth a specific HTTP status is thrown as an `AppError` (`utils/AppError.js`) and caught by the single `errorHandler` middleware — never build a response object inside a controller for an error case.
 
 ## Core architectural rules
 

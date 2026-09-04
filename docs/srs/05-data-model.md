@@ -1,6 +1,6 @@
 # 05 — Data Model & Row Level Security
 
-Owner: **Bhanuka Samarasinghe (Supabase & Storage Architect)**. Run [`backend/database/schema.sql`](../../backend/database/schema.sql) in the Supabase SQL editor early in the Build phase — everything else depends on it. (That file is the source of truth; this doc explains the *why*.)
+Owner: **Bhanuka Samarasinghe (Supabase & Storage Architect)**. Run the migrations in [`backend/database/migrations/`](../../backend/database/migrations/) in order (001, then 002) in the Supabase SQL editor early in the Build phase — everything else depends on it. (Those files are the source of truth; this doc explains the *why*.)
 
 ## Tables
 
