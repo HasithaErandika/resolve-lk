@@ -20,12 +20,12 @@ Reminder: admins never self-register. Admin accounts are created manually in the
 
 | Task | Status | Notes |
 |---|---|---|
-| Admin login (Supabase Auth, real email/password) | Not Started | No self-registration — admin accounts are seeded manually by Bhanuka |
-| Dashboard table/board of all issues | Not Started | `GET /api/issues` (authenticated, admin sees all) |
-| Search + category/status filter | Not Started | |
-| Status update control (`Pending → In Progress → Resolved`) | Not Started | `PATCH /api/issues/:id/status` |
-| Surface AI priority/department/reason, flag Critical | Not Started | |
-| End-to-end test on live deployed URL | Not Started | Ship phase |
+| Admin login (Supabase Auth, real email/password) | Done | Supabase Auth email/password wired, profile role check, demo evaluator login |
+| Dashboard table/board of all issues | Done | Interactive Table & Kanban views with summary metric KPI counters |
+| Search + category/status filter | Done | Keyword search across fields + category, status, priority, and ward filters |
+| Status update control (`Pending → In Progress → Resolved`) | Done | `PATCH /api/issues/:id/status` wired with +15 citizen point bonus toasts |
+| Surface AI priority/department/reason, flag Critical | Done | Critical alerts flagged with maple styling, department and Gemini reason displayed |
+| End-to-end test on live deployed URL | In Progress | Local verification passed; live deployment testing pending ship phase |
 
 ## Bhanuka Samarasinghe — Supabase & Storage Architect
 
