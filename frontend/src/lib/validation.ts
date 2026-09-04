@@ -1,5 +1,5 @@
-// Mirrors backend/src/validation/issues.js and backend/src/lib/nic.js —
-// keep both in sync if the rules change.
+// Mirrors backend/src/validation/issues.js and backend/src/lib/nic.js.
+// Keep both in sync if the rules change.
 
 const NIC_REGEX = /^([0-9]{9}[VvXx]|[0-9]{12})$/
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -27,10 +27,10 @@ export function validateReportForm(values: ReportFormValues): ReportFormErrors {
   const errors: ReportFormErrors = {}
 
   if (!values.nic || !isValidNic(values.nic)) {
-    errors.nic = 'Please enter a valid NIC number — either 9 digits followed by V/X, or 12 digits.'
+    errors.nic = 'Please enter a valid NIC number: either 9 digits followed by V/X, or 12 digits.'
   }
   if (!values.email || !isValidEmail(values.email)) {
-    errors.email = 'Please enter a valid email address — we use it to set up your account.'
+    errors.email = 'Please enter a valid email address. We use it to set up your account.'
   }
   if (!values.category) {
     errors.category = 'Please select a category.'

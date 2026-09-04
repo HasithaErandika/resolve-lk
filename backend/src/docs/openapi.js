@@ -3,7 +3,7 @@ const IssueSchema = {
   properties: {
     id: { type: 'string', format: 'uuid' },
     citizen_id: { type: 'string', format: 'uuid' },
-    category: { type: 'string', enum: ['Garbage', 'Road', 'Water', 'Lighting'] },
+    category: { type: 'string', enum: ['Garbage', 'Road', 'Water', 'Lighting', 'Drainage', 'Sewerage', 'Public Safety', 'Other'] },
     ward: { type: 'string' },
     landmark: { type: 'string' },
     description: { type: 'string' },
@@ -35,7 +35,7 @@ const ErrorSchema = {
 const PaginationParams = [
   { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
   { name: 'pageSize', in: 'query', schema: { type: 'integer', default: 20, maximum: 100 } },
-  { name: 'category', in: 'query', schema: { type: 'string', enum: ['Garbage', 'Road', 'Water', 'Lighting'] } },
+  { name: 'category', in: 'query', schema: { type: 'string', enum: ['Garbage', 'Road', 'Water', 'Lighting', 'Drainage', 'Sewerage', 'Public Safety', 'Other'] } },
   { name: 'status', in: 'query', schema: { type: 'string', enum: ['Pending', 'In Progress', 'Resolved'] } },
   { name: 'search', in: 'query', schema: { type: 'string' } },
 ];
@@ -84,7 +84,7 @@ export const openapiSpec = {
                   nic: { type: 'string', example: '200112345678' },
                   email: { type: 'string', format: 'email' },
                   full_name: { type: 'string' },
-                  category: { type: 'string', enum: ['Garbage', 'Road', 'Water', 'Lighting'] },
+                  category: { type: 'string', enum: ['Garbage', 'Road', 'Water', 'Lighting', 'Drainage', 'Sewerage', 'Public Safety', 'Other'] },
                   ward: { type: 'string' },
                   landmark: { type: 'string' },
                   description: { type: 'string', minLength: 20 },

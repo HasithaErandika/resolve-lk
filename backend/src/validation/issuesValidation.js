@@ -1,6 +1,6 @@
 import { isValidNic } from '../lib/nic.js';
 
-const CATEGORIES = ['Garbage', 'Road', 'Water', 'Lighting'];
+const CATEGORIES = ['Garbage', 'Road', 'Water', 'Lighting', 'Drainage', 'Sewerage', 'Public Safety', 'Other'];
 const STATUSES = ['Pending', 'In Progress', 'Resolved'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -9,10 +9,10 @@ export function validateNewIssue(body) {
   const { nic, email, category, ward, landmark, description } = body;
 
   if (!nic || !isValidNic(nic)) {
-    errors.nic = 'Please enter a valid NIC number — either 9 digits followed by V/X, or 12 digits.';
+    errors.nic = 'Please enter a valid NIC number: either 9 digits followed by V/X, or 12 digits.';
   }
   if (!email || !EMAIL_REGEX.test(email.trim())) {
-    errors.email = 'Please enter a valid email address — we use it to set up your account.';
+    errors.email = 'Please enter a valid email address. We use it to set up your account.';
   }
   if (!category || !CATEGORIES.includes(category)) {
     errors.category = `Category must be one of: ${CATEGORIES.join(', ')}.`;
@@ -39,7 +39,7 @@ export function validateStatus(status) {
 
 export function validateNic(nic) {
   if (!nic || !isValidNic(nic)) {
-    return 'Please enter a valid NIC number — either 9 digits followed by V/X, or 12 digits.';
+    return 'Please enter a valid NIC number: either 9 digits followed by V/X, or 12 digits.';
   }
   return null;
 }

@@ -11,9 +11,7 @@ export interface AdminAuthContextType {
   user: AdminUser | null
   token: string | null
   isLoading: boolean
-  isDemoMode: boolean
   signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
-  signInAsDemo: () => void
   signOut: () => Promise<void>
 }
 

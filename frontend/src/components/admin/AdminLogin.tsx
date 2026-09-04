@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useAdminAuth } from '../../context/useAdminAuth'
 
 export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
-  const { signIn, signInAsDemo, isLoading } = useAdminAuth()
+  const { signIn, isLoading } = useAdminAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -28,11 +28,6 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
     if (!result.success && result.error) {
       setError(result.error)
     }
-  }
-
-  function handleQuickDemo() {
-    setError(null)
-    signInAsDemo()
   }
 
   return (
@@ -70,7 +65,7 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
               Municipal Console
             </h1>
             <p className="mt-1.5 text-xs text-bark/60">
-              Pradeshiya Sabha &amp; Municipal Council Operations
+              Pradeshiya Sabha and Municipal Council Operations
             </p>
           </div>
 
@@ -108,14 +103,9 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
             </div>
 
             <div>
-              <div className="flex items-center justify-between">
-                <label
-                  htmlFor="admin-password"
-                  className="block text-xs font-semibold text-bark/80"
-                >
-                  Password
-                </label>
-              </div>
+              <label htmlFor="admin-password" className="block text-xs font-semibold text-bark/80">
+                Password
+              </label>
               <input
                 id="admin-password"
                 type="password"
@@ -136,33 +126,7 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="relative my-7">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-bark/10" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-3 font-semibold text-bark/40">Demo / Evaluation</span>
-            </div>
-          </div>
-
-          {/* Quick Demo Access Button */}
-          <button
-            type="button"
-            onClick={handleQuickDemo}
-            className="flex w-full items-center justify-center gap-2 rounded-xl border border-bark/15 bg-bark/5 py-2.5 text-sm font-semibold text-bark transition hover:border-pumpkin/40 hover:bg-bark/10"
-          >
-            <svg viewBox="0 0 20 20" className="h-4 w-4 text-pumpkin" fill="currentColor">
-              <path
-                fillRule="evenodd"
-                d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z"
-                clipRule="evenodd"
-              />
-            </svg>
-            Instant Demo Sign-in (Jayashan - Admin)
-          </button>
-
-          <p className="mt-4 text-center text-xs leading-relaxed text-bark/40">
+          <p className="mt-6 text-center text-xs leading-relaxed text-bark/40">
             Authorized municipal officers only. All actions and status modifications are logged and
             audited.
           </p>

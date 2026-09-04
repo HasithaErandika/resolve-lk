@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 const STEPS = [
   {
     title: 'Report',
-    body: 'Describe the issue, drop a photo, and submit — your NIC and email set up your account automatically, no separate sign-up.',
+    body: 'Describe the issue, drop a photo, and submit. Your NIC and email set up your account automatically, no separate sign-up.',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -22,7 +22,7 @@ const STEPS = [
   },
   {
     title: 'Resolved',
-    body: 'Municipal engineers track, assign, and close it out on their dashboard — and you earn contribution points when they do.',
+    body: 'Municipal engineers track, assign, and close it out on their dashboard, and you earn contribution points when they do.',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -55,11 +55,11 @@ export function Home() {
               Built for Sri Lanka
             </p>
             <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-bark sm:text-5xl">
-              Report a civic issue in your neighbourhood — no account needed.
+              Report a civic issue in your neighbourhood. No account needed.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-bark/70 sm:text-lg">
-              Garbage dumping, potholes, broken streetlights, burst pipes, blocked drains —
-              residents across Sri Lanka have no reliable way to report these to their local
+              Garbage dumping, potholes, broken streetlights, burst pipes, blocked drains.
+              Residents across Sri Lanka have no reliable way to report these to their local
               council, and no visibility once they do. Resolve LK gives every report a public,
               tracked home, triaged automatically by AI.
             </p>
@@ -108,7 +108,7 @@ export function Home() {
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-bark/50 mb-1.5">Original Report</p>
                   <p className="text-sm italic text-bark/80 bg-birch p-3 rounded-xl border border-bark/5">
-                    "Massive pile of garbage near the school gates, mosquitos are breeding everywhere."
+                    &ldquo;Massive pile of garbage near the school gates, mosquitos are breeding everywhere.&rdquo;
                   </p>
                 </div>
                 
@@ -163,9 +163,8 @@ export function Home() {
       </section>
 
       {/* How it works */}
-      <section className="py-20 relative overflow-hidden">
-        <div className="absolute inset-0 bg-pumpkin/5 -skew-y-3 transform origin-top-left"></div>
-        <div className="relative mx-auto max-w-6xl px-4 sm:px-6">
+      <section className="border-t border-bark/10 bg-pumpkin/5 py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="max-w-2xl">
             <h2 className="text-3xl font-extrabold tracking-tight text-bark sm:text-4xl">
               How it works

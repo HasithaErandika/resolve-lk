@@ -4,10 +4,10 @@ export function Report() {
   return (
     <section className="py-16">
       <div className="mx-auto max-w-5xl px-4 sm:px-6">
-        <div className="max-w-2xl">
-          <h2 className="text-3xl font-extrabold tracking-tight text-bark">Report an issue</h2>
+        <div className="mx-auto max-w-xl text-center">
+          <h2 className="text-3xl font-extrabold tracking-tight text-bark sm:text-4xl">Report an issue</h2>
           <p className="mt-2 text-bark/60">
-            One form does it all — your NIC identifies your report, and if it&apos;s your
+            One form does it all. Your NIC identifies your report, and if it&apos;s your
             first time, an account is created for you automatically. No separate sign-up.
           </p>
         </div>

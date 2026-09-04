@@ -2,6 +2,7 @@ import { useState, type ChangeEvent, type FormEvent, type ReactNode } from 'reac
 import { CATEGORIES } from '../types/issue'
 import { WARDS } from '../data/wards'
 import { validateReportForm, type ReportFormErrors, type ReportFormValues } from '../lib/validation'
+import { SearchableSelect } from './SearchableSelect'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'
 
@@ -26,9 +27,13 @@ export function ReportForm() {
   const [submitError, setSubmitError] = useState<string | null>(null)
 
   function handleChange(field: keyof ReportFormValues) {
-    return (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setValues((prev) => ({ ...prev, [field]: event.target.value }))
     }
+  }
+
+  function setField(field: keyof ReportFormValues) {
+    return (value: string) => setValues((prev) => ({ ...prev, [field]: value }))
   }
 
   function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
@@ -97,7 +102,7 @@ export function ReportForm() {
         <h3 className="mt-5 text-xl font-bold text-bark">Report submitted</h3>
         <p className="mt-2 text-sm text-bark/60">
           Your report has been triaged and added to the public queue. You earned{' '}
-          <span className="font-semibold text-pumpkin">+10 contribution points</span> — total:{' '}
+          <span className="font-semibold text-pumpkin">+10 contribution points</span>. Total:{' '}
           <span className="font-semibold text-bark">{points}</span>.
         </p>
         <button
@@ -139,34 +144,24 @@ export function ReportForm() {
 
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Category" htmlFor="category" error={errors.category}>
-            <select
+            <SearchableSelect
               id="category"
               value={values.category}
-              onChange={handleChange('category')}
-              className={inputClass(Boolean(errors.category))}
-            >
-              <option value="">Select a category</option>
-              {CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+              onChange={setField('category')}
+              options={CATEGORIES}
+              placeholder="Select a category"
+              hasError={Boolean(errors.category)}
+            />
           </Field>
           <Field label="Ward / Zone" htmlFor="ward" error={errors.ward}>
-            <select
+            <SearchableSelect
               id="ward"
               value={values.ward}
-              onChange={handleChange('ward')}
-              className={inputClass(Boolean(errors.ward))}
-            >
-              <option value="">Select a ward/zone</option>
-              {WARDS.map((ward) => (
-                <option key={ward} value={ward}>
-                  {ward}
-                </option>
-              ))}
-            </select>
+              onChange={setField('ward')}
+              options={WARDS}
+              placeholder="Select a ward/zone"
+              hasError={Boolean(errors.ward)}
+            />
           </Field>
         </div>
 
@@ -187,7 +182,7 @@ export function ReportForm() {
             value={values.description}
             onChange={handleChange('description')}
             rows={4}
-            placeholder="At least 20 characters — the more detail, the faster it can be triaged."
+            placeholder="At least 20 characters. The more detail, the faster it can be triaged."
             className={inputClass(Boolean(errors.description))}
           />
           <p className="mt-1 text-xs text-bark/40">{values.description.trim().length}/20 characters minimum</p>
@@ -236,7 +231,7 @@ export function ReportForm() {
           </ol>
         </div>
         <div className="rounded-2xl bg-bark/5 p-5 text-xs leading-relaxed text-bark/50">
-          Your NIC is only used to identify your reports and stop duplicate/fake accounts — it
+          Your NIC is only used to identify your reports and stop duplicate/fake accounts. It
           is not shown publicly on the feed.
         </div>
       </aside>
