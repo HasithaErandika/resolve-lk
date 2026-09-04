@@ -51,6 +51,8 @@ Response envelope:
   | `landmark` | string | yes | non-empty |
   | `description` | string | yes | ≥ 20 characters |
   | `photo` | file | no | image mime type, ≤ 5MB |
+  | `latitude` | number | no | -90 to 90; captured via the browser's Geolocation API, not a Maps integration |
+  | `longitude` | number | no | -180 to 180 |
 
 - **Server steps:** validate fields → find-or-create the citizen's account by `nic` (new NIC: create a Supabase Auth user with the given `email` and password = `nic`; existing NIC: reuse it, ignoring whatever email was typed this time) → if `photo` present, upload to R2, get public URL → call the Gemini API with `category` + `description` → insert the row (with `citizen_id` = that account's id) using the Supabase service role client → atomically award **+10** contribution points (`increment_points` RPC) → return the created row.
 - **Success:** `201 Created`

@@ -1,32 +1,48 @@
 import { useState, type FormEvent } from 'react'
 import { useAdminAuth } from '../../context/useAdminAuth'
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+interface FieldErrors {
+  email?: string
+  password?: string
+}
+
 export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
   const { signIn, isLoading } = useAdminAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  function validate(): FieldErrors {
+    const errors: FieldErrors = {}
+    if (!email.trim()) {
+      errors.email = 'Please enter your municipal staff email.'
+    } else if (!EMAIL_REGEX.test(email.trim())) {
+      errors.email = 'Please enter a valid email address.'
+    }
+    if (!password) {
+      errors.password = 'Please enter your password.'
+    }
+    return errors
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setError(null)
+    setFormError(null)
 
-    if (!email.trim()) {
-      setError('Please enter your municipal staff email.')
-      return
-    }
-    if (!password) {
-      setError('Please enter your password.')
-      return
-    }
+    const errors = validate()
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) return
 
     setIsSubmitting(true)
     const result = await signIn(email, password)
     setIsSubmitting(false)
 
     if (!result.success && result.error) {
-      setError(result.error)
+      setFormError(result.error)
     }
   }
 
@@ -69,8 +85,8 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
             </p>
           </div>
 
-          {/* Error notice */}
-          {error && (
+          {/* Form-level error notice (auth failure, access denied, network issue) */}
+          {formError && (
             <div className="mt-6 rounded-xl border border-maple/20 bg-maple/10 p-3.5 text-xs text-maple">
               <div className="flex items-start gap-2.5">
                 <svg viewBox="0 0 20 20" className="mt-0.5 h-4 w-4 shrink-0" fill="currentColor">
@@ -80,7 +96,7 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
                     clipRule="evenodd"
                   />
                 </svg>
-                <span>{error}</span>
+                <span>{formError}</span>
               </div>
             </div>
           )}
@@ -98,8 +114,15 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="officer@council.gov.lk"
                 autoComplete="email"
-                className="mt-1.5 w-full rounded-xl border border-bark/15 bg-white px-3.5 py-2.5 text-sm text-bark placeholder:text-bark/30 outline-none transition focus:border-pumpkin focus:ring-2 focus:ring-pumpkin/20"
+                className={`mt-1.5 w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-bark placeholder:text-bark/30 outline-none transition focus:ring-2 ${
+                  fieldErrors.email
+                    ? 'border-maple/50 focus:border-maple focus:ring-maple/20'
+                    : 'border-bark/15 focus:border-pumpkin focus:ring-pumpkin/20'
+                }`}
               />
+              {fieldErrors.email && (
+                <p className="mt-1.5 text-xs font-medium text-maple">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div>
@@ -113,8 +136,15 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
                 autoComplete="current-password"
-                className="mt-1.5 w-full rounded-xl border border-bark/15 bg-white px-3.5 py-2.5 text-sm text-bark placeholder:text-bark/30 outline-none transition focus:border-pumpkin focus:ring-2 focus:ring-pumpkin/20"
+                className={`mt-1.5 w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-bark placeholder:text-bark/30 outline-none transition focus:ring-2 ${
+                  fieldErrors.password
+                    ? 'border-maple/50 focus:border-maple focus:ring-maple/20'
+                    : 'border-bark/15 focus:border-pumpkin focus:ring-pumpkin/20'
+                }`}
               />
+              {fieldErrors.password && (
+                <p className="mt-1.5 text-xs font-medium text-maple">{fieldErrors.password}</p>
+              )}
             </div>
 
             <button

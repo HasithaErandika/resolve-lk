@@ -18,6 +18,8 @@ export interface CivicIssue {
   landmark: string
   description: string
   photoUrl?: string | null
+  latitude?: number | null
+  longitude?: number | null
   status: IssueStatus
   aiPriority: IssuePriority
   aiDepartment: string
@@ -53,6 +55,8 @@ export interface RawIssueData {
   description?: unknown
   photoUrl?: unknown
   photo_url?: unknown
+  latitude?: unknown
+  longitude?: unknown
   status?: unknown
   aiPriority?: unknown
   ai_priority?: unknown
@@ -79,6 +83,8 @@ export function normalizeIssue(raw: RawIssueData): CivicIssue {
     landmark: String(raw.landmark ?? ''),
     description: String(raw.description ?? ''),
     photoUrl: photo != null ? String(photo) : null,
+    latitude: typeof raw.latitude === 'number' ? raw.latitude : null,
+    longitude: typeof raw.longitude === 'number' ? raw.longitude : null,
     status: (raw.status as IssueStatus) || 'Pending',
     aiPriority: (raw.aiPriority ?? raw.ai_priority ?? 'Medium') as IssuePriority,
     aiDepartment: String(raw.aiDepartment ?? raw.ai_department ?? 'Municipal Works'),

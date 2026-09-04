@@ -14,7 +14,7 @@ export const createIssue = asyncHandler(async (req, res) => {
   const errors = validateNewIssue(body);
   if (Object.keys(errors).length > 0) throw AppError.badRequest(errors);
 
-  const { nic, email, full_name: fullName, category, ward, landmark, description } = body;
+  const { nic, email, full_name: fullName, category, ward, landmark, description, latitude, longitude } = body;
 
   const citizen = await findOrCreateCitizenByNic({ nic: nic.trim(), email: email.trim(), fullName });
 
@@ -28,6 +28,8 @@ export const createIssue = asyncHandler(async (req, res) => {
     landmark,
     description,
     photoUrl,
+    latitude: latitude !== undefined && latitude !== '' ? Number(latitude) : null,
+    longitude: longitude !== undefined && longitude !== '' ? Number(longitude) : null,
     triage,
   });
 
