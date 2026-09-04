@@ -35,7 +35,7 @@ Reminder: admins never self-register. Admin accounts are created manually in the
 | Run `backend/database/schema.sql` | Not Started | `profiles` (nic, points, role), `civic_issues`, trigger, RLS |
 | Configure Supabase Auth | Not Started | Email/password; confirm metadata → `profiles` trigger works for both self-provisioned citizens and manually created admins |
 | Seed the one admin test account | Not Started | Create user in Supabase dashboard manually, then `update profiles set role = 'admin' ...` — no self-registration |
-| Create & configure Cloudflare R2 bucket | Not Started | Public read access + API token; hand credentials to Hasitha |
+| Create & configure Cloudflare R2 bucket | Done | Bucket `resolve-lk` created, public r2.dev access enabled, credentials handed to Hasitha and verified with a live test upload |
 | Run `backend/database/seed.sql` | Not Started | So the feed/dashboard aren't empty for the demo |
 | Verify RLS with both roles | Not Started | Polish phase |
 
@@ -51,8 +51,10 @@ Reminder: admins never self-register. Admin accounts are created manually in the
 | R2 upload integration | Done | `backend/src/lib/r2.js` |
 | Gemini API triage integration | Done | `backend/src/lib/gemini.js`, with fallback on failure |
 | `requireAuth` / `requireAdmin` middleware | Done | |
-| Connect real Supabase/R2/Gemini credentials in `.env` | Not Started | Blocked on Bhanuka's Supabase project + R2 bucket |
-| Smoke-test every route against the live Supabase project | Not Started | |
+| Connect real R2 credentials in `.env` | Done | Verified with a live upload — `PUT` succeeded and the resulting URL returned `200 OK` publicly |
+| Connect real Supabase credentials in `.env` | Not Started | Blocked on Bhanuka's Supabase project (URL + anon key + service role key needed) |
+| Connect real Gemini API key in `.env` | Not Started | Need a key from [Google AI Studio](https://aistudio.google.com/apikey) |
+| Smoke-test every route against the live Supabase project | Not Started | Blocked on Supabase credentials above |
 | Deploy backend to Choreo (fallback: Render) | Not Started | Ship phase |
 
 ## Shared / whole-team

@@ -32,7 +32,7 @@ const FALLBACK_TRIAGE = {
 export async function triageIssue({ category, description }) {
   try {
     const response = await getClient().models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.1-flash-lite',
       contents: `Category: ${category}\nDescription: ${description}`,
       config: {
         systemInstruction: SYSTEM_PROMPT,
