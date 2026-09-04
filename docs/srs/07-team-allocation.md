@@ -36,7 +36,7 @@ The one dashboard in this app, and it's admin-only, with a real login.
 ## Bhanuka Samarasinghe — Supabase & Storage Architect
 
 - Create the Supabase project.
-- Run `backend/database/schema.sql`: `profiles` (with the unique `nic` column and `points` counter), `civic_issues`, the new-user trigger, and all RLS policies.
+- Run `backend/database/migrations/001_init_schema.sql` then `002_points_rpc_and_search_indexes.sql`: `profiles` (with the unique `nic` column and `points` counter), `civic_issues`, the new-user trigger, all RLS policies, the `increment_points` function, and search indexes.
 - Configure Supabase Auth (email/password) and confirm `full_name`/`nic` metadata flows into `profiles` via the trigger — including when accounts are auto-created server-side (not just self-signup).
 - Seed the one admin test account (manual role flip in SQL editor — see the schema file).
 - Create and configure the Cloudflare R2 bucket (public read access, API token), and hand credentials to Hasitha.

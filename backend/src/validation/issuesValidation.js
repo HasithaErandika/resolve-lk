@@ -4,11 +4,6 @@ const CATEGORIES = ['Garbage', 'Road', 'Water', 'Lighting'];
 const STATUSES = ['Pending', 'In Progress', 'Resolved'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/**
- * Validates a new-issue submission (which doubles as citizen signup via NIC
- * + email). Returns { errors } with friendly, field-specific messages —
- * never a raw "invalid input".
- */
 export function validateNewIssue(body) {
   const errors = {};
   const { nic, email, category, ward, landmark, description } = body;
@@ -41,3 +36,12 @@ export function validateStatus(status) {
   }
   return null;
 }
+
+export function validateNic(nic) {
+  if (!nic || !isValidNic(nic)) {
+    return 'Please enter a valid NIC number — either 9 digits followed by V/X, or 12 digits.';
+  }
+  return null;
+}
+
+export { CATEGORIES, STATUSES };
