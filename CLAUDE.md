@@ -4,9 +4,9 @@ This file gives Claude (or any AI coding assistant) the context needed to work o
 
 ## What this project is
 
-Resolve LK is a civic-issue reporting and resolution web app for Sri Lankan local councils, built for the SE3090 Mini Hackathon (4-hour supervised build, team of 4). Citizens report issues (garbage, road damage, water, lighting); municipal admins triage and resolve them. An AI auto-triage feature scores each report's priority. Full background: [`docs/srs/01-problem-statement.md`](docs/srs/01-problem-statement.md) and [`docs/srs/02-solution-overview.md`](docs/srs/02-solution-overview.md).
+Resolve LK is a civic-issue reporting and resolution web app for Sri Lankan local councils, built for the SE3090 Mini Hackathon (4-hour supervised build, team of 4). Reporting and browsing are fully public — no login wall. Citizens report issues (garbage, road damage, water, lighting) through one form that also functions as signup (NIC + email); municipal admins log in for real to triage and resolve them. An AI auto-triage feature scores each report's priority, and citizens earn contribution points. Full background: [`docs/srs/01-problem-statement.md`](docs/srs/01-problem-statement.md) and [`docs/srs/02-solution-overview.md`](docs/srs/02-solution-overview.md).
 
-**Do not build anything listed as out-of-scope** in [`docs/srs/03-scope-and-boundaries.md`](docs/srs/03-scope-and-boundaries.md) — no real maps/GPS, no native mobile app, no third "worker" app, no admin self-registration. Time is the binding constraint, not ambition.
+**Do not build anything listed as out-of-scope** in [`docs/srs/03-scope-and-boundaries.md`](docs/srs/03-scope-and-boundaries.md) — no real maps/GPS, no native mobile app, no third "worker" app, no admin self-registration, **no citizen dashboard or traditional login screen**. Time is the binding constraint, not ambition.
 
 ## Tech stack (fixed — do not substitute)
 
@@ -17,36 +17,39 @@ Resolve LK is a civic-issue reporting and resolution web app for Sri Lankan loca
 | Database | Supabase (PostgreSQL) | Also provides Auth |
 | Auth | Supabase Auth (email/password) | Roles handled via a `profiles` table, NOT Supabase's built-in metadata alone |
 | File storage | **Cloudflare R2** | S3-compatible. **Not** Supabase Storage. |
-| AI | Anthropic Claude API | Called server-side only, from Express, never from the frontend |
+| AI | **Google Gemini API** | Called server-side only, from Express, never from the frontend |
 
 Rationale and diagrams: [`docs/srs/04-architecture.md`](docs/srs/04-architecture.md)
 
-## Repository structure (planned)
+## Repository structure
 
 ```
 resolve-lk/
-├── frontend/           # React + Vite + Tailwind app (citizen + admin UI)
-├── backend/            # Express API
+├── frontend/            # React + Vite + Tailwind app (public landing/feed/report + admin dashboard)
+├── backend/             # Express API
+│   └── database/         # schema.sql, seed.sql (run in the Supabase SQL editor)
 ├── docs/
-│   ├── srs/             # problem, solution, scope, architecture, data model, API spec, team allocation
+│   ├── srs/               # problem, solution, scope, architecture, data model, API spec, team allocation
 │   └── ai-prompt-log.md
-├── .github/workflows/   # CI (build/lint checks)
+├── .github/workflows/    # CI (build/lint checks)
 ├── README.md
 ├── PLAN.md
 └── CLAUDE.md
 ```
 
-`frontend/` and `backend/` do not exist yet — they get scaffolded when implementation starts. Do not create them until told to.
+`frontend/` and `backend/` are already scaffolded — see their own directories. The backend (routes, middleware, lib) is largely implemented; the frontend currently has a static landing page placeholder (public feed and report form are UI-only, not yet wired to the API).
 
 ## Core architectural rules
 
-1. **Writes go through the backend.** The frontend never inserts/updates `civic_issues` directly. Citizen submission and admin status updates both hit Express endpoints, which use the Supabase **service role** key (server-side only, never shipped to the client).
-2. **Reads can go direct.** The frontend may query Supabase directly with the anon key for read-only views (e.g. a citizen's own issue list), relying on RLS. The admin dashboard may also just call the backend's `GET /api/issues` for consistency — either is acceptable; pick one and be consistent within a feature.
-3. **Role check happens server-side.** Any admin-only backend route must verify the caller's Supabase JWT and check `profiles.role = 'admin'` before proceeding. Never trust a role claim sent from the client.
-4. **Photo upload flow (keep it simple):** frontend sends a multipart form directly to `POST /api/issues`; Express uploads the file to R2 using `@aws-sdk/client-s3` (R2 is S3-compatible), then calls Claude for triage, then inserts the row into Supabase — all in one request/response cycle. Do not build a separate presigned-URL upload step; it adds CORS complexity not worth it in 4 hours.
-5. **Claude API key and R2 credentials live only in backend environment variables.** Never expose them to the frontend bundle.
-6. **Admin accounts are seeded manually**, not created through public signup. Public signup always creates a `citizen` profile.
-7. **Citizens register with their NIC (National Identity Card) number**, stored as a unique column on `profiles` and passed through as Supabase Auth signup metadata. Validate the format (`^([0-9]{9}[VvXx]|[0-9]{12})$`) client- and server-side, and surface a clean "an account already exists for this NIC" message on the unique-constraint conflict rather than a raw DB error. We only validate format + uniqueness in our own DB — no government registry check, that's explicitly out of scope.
+1. **Reporting and browsing need no login at all.** `POST /api/issues` and `GET /api/issues/public` are public routes. Never add an auth requirement to either — that's the whole point of the design (see [`02-solution-overview.md`](02-solution-overview.md)).
+2. **The report form doubles as citizen signup.** It collects NIC (durable identity, unique) and email (Supabase Auth's required login field). First-time NIC → the backend auto-provisions an account (`supabaseAdmin.auth.admin.createUser`, password = the NIC itself); returning NIC → reuses the existing account regardless of what email was typed this time.
+3. **Writes go through the backend.** The frontend never inserts/updates `civic_issues` or `profiles` directly. All of that — including citizen account provisioning — happens in Express using the Supabase **service role** key (server-side only, never shipped to the client).
+4. **"My Reports" is the only citizen-facing login-like moment, and it's one field.** A citizen types their NIC into `POST /api/my-reports/login`; the backend resolves it to that account's email, signs in server-side (password is still the NIC), and returns a session for the frontend to adopt with `supabase.auth.setSession()`. Never show a citizen a password field.
+5. **Admins log in for real**, directly against Supabase Auth from the frontend, with real seeded credentials — this is the one traditional login screen in the app.
+6. **Role check happens server-side.** Any admin-only backend route must verify the caller's Supabase JWT and check `profiles.role = 'admin'` before proceeding. Never trust a role claim sent from the client.
+7. **Photo upload flow (keep it simple):** frontend sends a multipart form directly to `POST /api/issues`; Express uploads the file to R2 using `@aws-sdk/client-s3` (R2 is S3-compatible), then calls Gemini for triage, then inserts the row into Supabase — all in one request/response cycle. Do not build a separate presigned-URL upload step.
+8. **Gemini API key, R2 credentials, and the Supabase service role key live only in backend environment variables.** Never expose them to the frontend bundle.
+9. **Contribution points are a plain counter on `profiles.points`**, updated in application code (`backend/src/lib/citizens.js#awardPoints`): +10 on report submission, +15 bonus when an admin marks a report `Resolved`. Not a DB trigger — kept simple and easy to explain live in the demo.
 
 Full schema and RLS policies: [`docs/srs/05-data-model.md`](docs/srs/05-data-model.md)
 Full endpoint list: [`docs/srs/06-api-specification.md`](docs/srs/06-api-specification.md)
@@ -57,23 +60,25 @@ Full endpoint list: [`docs/srs/06-api-specification.md`](docs/srs/06-api-specifi
 ```
 VITE_SUPABASE_URL=
 VITE_SUPABASE_ANON_KEY=
-VITE_API_BASE_URL=
+VITE_API_BASE_URL=http://localhost:8787
 ```
 
 **`backend/.env`**
 ```
 SUPABASE_URL=
+SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=
 R2_SECRET_ACCESS_KEY=
 R2_BUCKET_NAME=
 R2_PUBLIC_URL_BASE=
-ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+CORS_ORIGIN=http://localhost:5173
 PORT=8787
 ```
 
-Never commit real values. `.env.example` files (once `frontend/` and `backend/` exist) should list these keys with empty/placeholder values only.
+Never commit real values — both `.env` files are gitignored; `.env.example` in each app lists these keys with empty values for reference.
 
 ## Conventions
 
@@ -87,7 +92,7 @@ Never commit real values. `.env.example` files (once `frontend/` and `backend/` 
 
 See [`docs/srs/07-team-allocation.md`](docs/srs/07-team-allocation.md) for the full breakdown. Summary:
 
-- **Member 1** — Citizen frontend (landing page, problem explainer, issue submission form + validation), deploys frontend.
-- **Member 2** — Admin frontend (dashboard, search/filter, status updates).
-- **Member 3** — Supabase (schema, Auth, RLS, seeded admin) + Cloudflare R2 bucket setup.
-- **Member 4** — Express backend, R2 upload integration, Claude API triage integration, deploys backend.
+- **Seneja Thehansi** — Citizen experience: landing page, public feed, report form (no dashboard), My Reports page. Deploys frontend.
+- **Jayashan Guruge** — Admin dashboard: login, table/board, search/filter, status updates.
+- **Bhanuka Samarasinghe** — Supabase (schema, Auth, RLS, seeded admin) + Cloudflare R2 bucket setup.
+- **Hasitha Erandika** — Express backend, R2 upload integration, Gemini API triage integration, points logic, deploys backend. *(Backend is already largely implemented — see `backend/src`.)*

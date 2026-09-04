@@ -1,0 +1,19 @@
+# This repo has its own .gitignore inside frontend/ and backend/ for
+# their build artifacts and dependencies. This root file only covers
+# things that can show up outside either app.
+
+# Env — never commit real secrets
+.env
+.env.local
+.env.*.local
+
+# Stray installs at repo root
+node_modules
+
+# Editors / OS
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+Thumbs.db
+*.swp

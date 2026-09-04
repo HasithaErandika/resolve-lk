@@ -1,30 +1,37 @@
 # 06 — API Specification
 
-Owner: **Member 4 (Backend & AI Integration)**. Base path assumed: `/api`. All protected routes expect `Authorization: Bearer <supabase_jwt>`.
+Owner: **Hasitha Erandika (Backend & AI Integration)**. Base path: `/api`. Already implemented in `backend/src/routes/` — this doc explains the contract for whoever's calling it (Seneja and Jayashan on the frontend).
+
+Only two routes require a bearer token: `GET /api/issues` (my-reports/admin) and `PATCH /api/issues/:id/status` (admin). Everything else — submitting a report and browsing the public feed — is intentionally open, since neither citizen action should sit behind a login. See [`02-solution-overview.md`](02-solution-overview.md).
 
 ## Auth
 
-There are no custom `/auth` routes — sign-up and login happen entirely on the frontend via the Supabase JS client (`supabase.auth.signUp`, `supabase.auth.signInWithPassword`). The backend only ever *verifies* a token it's handed; it never issues one.
+There is no `/auth/signup` or `/auth/login` route. Two different things happen instead:
+
+- **Citizens** never explicitly log in. `POST /api/issues` auto-provisions or reuses an account behind the scenes (see below). If a citizen wants to see their own history, `POST /api/my-reports/login` (NIC only) hands back a real Supabase session for the frontend to adopt.
+- **Admins** log in the normal way, directly against Supabase Auth from the frontend (`supabase.auth.signInWithPassword`) with a real admin email/password (seeded manually — see [`05-data-model.md`](05-data-model.md)).
 
 **Middleware — `requireAuth`**: reads the bearer token, calls `supabase.auth.getUser(token)`; 401 if invalid/missing.
 **Middleware — `requireAdmin`**: runs after `requireAuth`; looks up `profiles.role` for the user; 403 if not `admin`.
 
 ## `POST /api/issues`
 
-Create a new civic issue. Citizen-only (any authenticated user with role `citizen`, or simply any authenticated user — admins aren't expected to file reports but it's not worth blocking).
+**PUBLIC — no auth header needed.** Creates a new civic issue. This is also, functionally, the citizen "signup" — see [`02-solution-overview.md`](02-solution-overview.md).
 
-- **Auth:** required
 - **Content-Type:** `multipart/form-data`
 - **Fields:**
   | Field | Type | Required | Validation |
   |---|---|---|---|
+  | `nic` | string | yes | Sri Lankan NIC format (old or new) |
+  | `email` | string | yes | valid email — used as the Supabase Auth username if this NIC is new |
+  | `full_name` | string | no | passed through to the profile if this NIC is new |
   | `category` | string | yes | one of `Garbage`, `Road`, `Water`, `Lighting` |
   | `ward` | string | yes | non-empty |
   | `landmark` | string | yes | non-empty |
   | `description` | string | yes | ≥ 20 characters |
   | `photo` | file | no | image mime type, ≤ 5MB |
 
-- **Server steps:** validate fields → if `photo` present, upload to R2, get public URL → call Claude API with `category` + `description` → insert row (with `citizen_id` = authenticated user's id) using the Supabase service role client → return the created row.
+- **Server steps:** validate fields → find-or-create the citizen's account by `nic` (new NIC: create a Supabase Auth user with the given `email` and password = `nic`; existing NIC: reuse it, ignoring whatever email was typed this time) → if `photo` present, upload to R2, get public URL → call the Gemini API with `category` + `description` → insert the row (with `citizen_id` = that account's id) using the Supabase service role client → award **+10** contribution points → return the created row.
 - **Success:** `201 Created`
   ```json
   {
@@ -38,7 +45,8 @@ Create a new civic issue. Citizen-only (any authenticated user with role `citize
     "ai_priority": "Critical",
     "ai_department": "Public Health",
     "ai_reason": "...",
-    "created_at": "2026-09-04T10:00:00Z"
+    "created_at": "2026-09-04T10:00:00Z",
+    "contributor_points": 10
   }
   ```
 - **Validation error:** `400 Bad Request`
@@ -46,15 +54,36 @@ Create a new civic issue. Citizen-only (any authenticated user with role `citize
   { "errors": { "description": "Description must be at least 20 characters so engineers have enough detail." } }
   ```
 
+## `GET /api/issues/public`
+
+**PUBLIC — no auth header needed.** The anonymous, browsable feed for the landing page — a "gig board" of open issues. Never includes `citizen_id` or any other identifying detail.
+
+- **Query params:** `category` (optional filter), `status` (optional filter), `search` (optional, matches `description`/`landmark`)
+- **Success:** `200 OK` — array of `{ id, category, ward, landmark, description, photo_url, status, ai_priority, ai_department, ai_reason, created_at }`
+
+## `POST /api/my-reports/login`
+
+**PUBLIC.** A citizen types only their NIC to see their own report history — no password field is ever shown.
+
+- **Body:** `{ "nic": "200112345678" }`
+- **Server steps:** look up the profile by `nic` → look up that account's real email via the Supabase admin API → sign in with `(email, nic)` — password has always been the NIC — → return the resulting session.
+- **Success:** `200 OK`
+  ```json
+  { "session": { "access_token": "...", "refresh_token": "...", "...": "..." } }
+  ```
+  The frontend adopts this with `supabase.auth.setSession({ access_token, refresh_token })`, then calls `GET /api/issues` (or reads Supabase directly) to list the citizen's own reports and current points.
+- **Not found:** `404 Not Found` — `{ "error": "No account found for this NIC. Report an issue first to create one." }`
+- **Invalid NIC format:** `400 Bad Request`
+
 ## `GET /api/issues`
 
-List issues. Behavior depends on caller role:
-- **citizen:** returns only their own issues
-- **admin:** returns all issues
+Requires a session. Behavior depends on caller role:
+- **citizen:** returns only their own issues ("My Reports")
+- **admin:** returns all issues (the admin dashboard)
 
 - **Auth:** required
 - **Query params:** `category` (optional filter), `status` (optional filter), `search` (optional, matches against `description`/`landmark`)
-- **Success:** `200 OK` — array of issue objects (same shape as above)
+- **Success:** `200 OK` — array of full issue objects (includes `citizen_id`, unlike the public feed)
 
 ## `GET /api/issues/:id`
 
@@ -66,7 +95,7 @@ Fetch one issue. Citizens may only fetch their own; admins may fetch any.
 
 ## `PATCH /api/issues/:id/status`
 
-Update an issue's status. Admin-only.
+Update an issue's status. Admin-only. Marking an issue `Resolved` awards the reporting citizen a **+15** points bonus.
 
 - **Auth:** required, `requireAdmin`
 - **Body:** `{ "status": "In Progress" }` — one of `Pending`, `In Progress`, `Resolved`
@@ -82,8 +111,8 @@ Update an issue's status. Admin-only.
 
 `errors` is only present for field-level validation failures; otherwise a top-level `error` string is enough.
 
-## Notes for Member 4
+## Implementation notes
 
-- Use `@supabase/supabase-js` twice: once with the **anon key** (only to call `auth.getUser(token)` for verification) and once with the **service role key** (for all DB writes/privileged reads). Keep them as two separate client instances, clearly named (`supabasePublic`, `supabaseAdmin`), so it's obvious which one is doing what.
-- Use `multer` (memory storage) to receive the photo upload, then stream the buffer to R2 via `@aws-sdk/client-s3`'s `PutObjectCommand`, with endpoint `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com` and `region: "auto"`.
-- Keep the Claude prompt small and deterministic: system prompt instructing it to act as a municipal triage engineer and return only JSON matching `{priority, department, reason}`. Validate the shape of what comes back before trusting it — fall back to `priority: "Medium"` if parsing fails, so a bad AI response never blocks the submission.
+- Two Supabase clients: `supabaseAdmin` (service role key — verifies JWTs, does all DB reads/writes, provisions accounts) and `supabasePublic` (anon key — used only inside `POST /api/my-reports/login` to perform the actual sign-in, exactly as the frontend would). See `backend/src/lib/supabase.js`.
+- `multer` (memory storage) receives the photo upload; the buffer streams to R2 via `@aws-sdk/client-s3`'s `PutObjectCommand`, endpoint `https://<R2_ACCOUNT_ID>.r2.cloudflarestorage.com`, `region: "auto"`. See `backend/src/lib/r2.js`.
+- The Gemini prompt is small and deterministic: a system instruction telling it to act as a municipal triage engineer and return only JSON matching `{priority, department, reason}` (`responseMimeType: "application/json"`). The response shape is validated before trusting it — falls back to `priority: "Medium"` if parsing fails, so a bad AI response never blocks a submission. See `backend/src/lib/gemini.js`.

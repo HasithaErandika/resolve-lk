@@ -12,12 +12,12 @@ This is the operational plan for the session. `CLAUDE.md` and `docs/srs/` hold t
 
 ## Schedule
 
-| Time | Phase | Everyone | Member 1 (Citizen FE) | Member 2 (Admin FE) | Member 3 (Supabase/Storage) | Member 4 (Backend/AI) |
+| Time | Phase | Everyone | Seneja (Citizen Experience) | Jayashan (Admin Dashboard) | Bhanuka (Supabase/Storage) | Hasitha (Backend/AI) |
 |---|---|---|---|---|---|---|
 | 0–20 | Plan | Confirm problem, lock MVP scope, agree on API contract (see [API spec](docs/srs/06-api-specification.md)) | — | — | — | — |
-| 20–45 | Design | Divide up work per [team allocation](docs/srs/07-team-allocation.md) | Sketch form fields & validation rules | Sketch dashboard layout & filters | Create Supabase project, run schema SQL | Init GitHub repo, Express skeleton, get API keys (Supabase, R2, Claude) |
-| 45–175 | Build | Heads down | Build landing page + problem explainer + issue form + validation | Build dashboard table/board, search + filter UI | Wire up Supabase Auth, RLS policies, seed one admin account; create & configure R2 bucket (public access) | Build `POST /api/issues`, `GET /api/issues`, `PATCH /api/issues/:id/status`; R2 upload; Claude triage call |
-| 175–205 | Polish | Integrate + fix | Wire form to real `POST /api/issues`, test validation errors | Wire dashboard to real `GET /api/issues` + status updates, confirm AI priority renders | Verify RLS with both roles, insert seed data | Verify triage output shape matches DB columns, fix edge cases |
+| 20–45 | Design | Divide up work per [team allocation](docs/srs/07-team-allocation.md) | Sketch landing/feed/form layout | Sketch dashboard layout & filters | Create Supabase project, run `backend/database/schema.sql` | *(backend already scaffolded — see `backend/src`)* get API keys (Supabase, R2, Gemini) |
+| 45–175 | Build | Heads down | Wire the landing page's public feed to `GET /api/issues/public` and the report form to `POST /api/issues`; build My Reports | Build dashboard table/board, search + filter UI, wire admin login | Wire up Supabase Auth, RLS policies, seed one admin account; create & configure R2 bucket (public access) | Plug real Supabase/R2/Gemini credentials into `.env`; smoke-test every route |
+| 175–205 | Polish | Integrate + fix | Test validation errors end to end, confirm points display | Wire dashboard to real `GET /api/issues` + status updates, confirm AI priority renders | Verify RLS with both roles, insert seed data | Verify triage output shape matches DB columns, fix edge cases |
 | 205–225 | Ship | Deploy + verify in incognito | Deploy frontend to Cloudflare Pages | Test full flow end-to-end on the live URL | Confirm Supabase + R2 reachable from deployed frontend/backend | Deploy backend to Choreo (or Render fallback) |
 | 225–240 | Submit | Record video, compile PDF | — | — | — | — |
 
@@ -28,8 +28,8 @@ Copied from the assignment brief — every box must be checked before minute 205
 - [ ] Clear landing page / main UI
 - [ ] Sri Lankan problem explained inside the app
 - [ ] At least 2 functional features (issue submission + admin dashboard/status update, minimum)
-- [ ] At least 1 form accepting user input (citizen signup form + issue submission form)
-- [ ] Input validation with friendly error messages (incl. NIC format + duplicate-NIC check on signup)
+- [ ] At least 1 form accepting user input (the report form — NIC + email double as signup)
+- [ ] Input validation with friendly error messages (NIC format, email format, description length, ...)
 - [ ] A way to display/search/filter/update/process information (admin dashboard search+filter+status update)
 - [ ] Responsive on desktop and mobile
 - [ ] Basic navigation between sections/screens

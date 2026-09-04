@@ -1,14 +1,14 @@
 # 05 — Data Model & Row Level Security
 
-Owner: **Member 3 (Supabase & Storage Architect)**. Run this in the Supabase SQL editor early in the Build phase — everything else depends on it.
+Owner: **Bhanuka Samarasinghe (Supabase & Storage Architect)**. Run [`backend/database/schema.sql`](../../backend/database/schema.sql) in the Supabase SQL editor early in the Build phase — everything else depends on it. (That file is the source of truth; this doc explains the *why*.)
 
 ## Tables
 
 ### `profiles`
 
-Extends `auth.users` with an app-level role. Supabase Auth alone has no `citizen`/`admin` distinction — this table is what makes role-based access possible.
+Extends `auth.users` with an app-level role, NIC, and a contribution-points counter. Supabase Auth alone has no `citizen`/`admin` distinction and no NIC field.
 
-Citizens register with their **National Identity Card (NIC) number** as a unique identifier — it's the one identity value every Sri Lankan citizen already has, and it stops one person from filing duplicate/fake reports under multiple accounts.
+Citizens are identified by their **National Identity Card (NIC) number** — the one identity value every Sri Lankan citizen already has, and it stops one person from filing duplicate/fake reports under multiple accounts. Supabase Auth still requires a real **email** as the account's actual username/password-login field, so the report form collects both: **NIC is the durable identity** (what find-or-create and "My Reports" are keyed on), **email satisfies Supabase's login requirement**. See [`02-solution-overview.md`](02-solution-overview.md) for the full flow.
 
 ```sql
 create table profiles (
@@ -16,6 +16,7 @@ create table profiles (
   full_name text,
   nic text unique,
   role text not null default 'citizen' check (role in ('citizen', 'admin')),
+  points integer not null default 0,
   created_at timestamp with time zone default timezone('utc', now()) not null
 );
 
@@ -25,9 +26,10 @@ create policy "users can view own profile"
   on profiles for select
   using (auth.uid() = id);
 
--- Auto-create a profile row whenever a new auth user signs up.
--- Public signup always lands here as 'citizen' by default.
--- nic/full_name are passed as Supabase Auth signup metadata (see below).
+-- Auto-create a profile row whenever a new auth user is created — whether
+-- that's the backend auto-provisioning a citizen from their NIC on first
+-- report, or an admin account created by hand in the Supabase dashboard.
+-- full_name/nic come from user_metadata.
 create function public.handle_new_user()
 returns trigger as $$
 begin
@@ -47,7 +49,7 @@ create trigger on_auth_user_created
   for each row execute procedure public.handle_new_user();
 ```
 
-### NIC validation rules (Member 1, on the signup form; mirror server-side)
+### NIC & email validation rules (Seneja Thehansi, on the report form; mirrored server-side by Hasitha in `backend/src/validation/issues.js`)
 
 Sri Lankan NIC numbers come in two valid formats:
 
@@ -58,14 +60,16 @@ Sri Lankan NIC numbers come in two valid formats:
 ^([0-9]{9}[VvXx]|[0-9]{12})$
 ```
 
-Friendly error message on mismatch: *"Please enter a valid NIC number — either 9 digits followed by V/X, or 12 digits."*
-Friendly error message on duplicate (the `profiles_nic_key` unique constraint will reject it — surface a clean message, not the raw DB error): *"An account already exists for this NIC. Please log in instead."*
+Friendly error message on NIC mismatch: *"Please enter a valid NIC number — either 9 digits followed by V/X, or 12 digits."*
+Friendly error message on invalid email: *"Please enter a valid email address — we use it to set up your account."*
 
-**Scope note:** we validate *format* and *uniqueness in our own database* only. We do not verify the NIC against the Department for Registration of Persons or any government registry — that integration doesn't exist as a public API and is out of scope for a 4-hour build. State this plainly if asked in the demo Q&A.
+There is no separate "duplicate NIC" error to show — reusing an existing NIC is the normal, expected path (it just reuses that citizen's account); it is not treated as an error.
 
-**Privacy note (mention as a known limitation, not a blocker):** NIC is stored as plain text for the hackathon to keep signup simple. In a production system this column should be encrypted at rest and masked in the UI (e.g. admin views show only the last 4 digits). Not required to implement for the demo, but worth stating you're aware of it — it reads well in the "quality & ownership" part of the Q&A.
+**Scope note:** we validate NIC *format* and *uniqueness in our own database* only. We do not verify the NIC against the Department for Registration of Persons or any government registry — that integration doesn't exist as a public API and is out of scope for a 4-hour build. State this plainly if asked in the demo Q&A.
 
-**To create the admin test account:** sign up normally through the app (or Supabase dashboard → Authentication → Add user), then in the SQL editor:
+**Auth trade-off (mention as a known limitation, not a blocker):** the backend sets each auto-provisioned account's password to the citizen's own NIC, so "My Reports" can work with just a NIC typed in — see [`06-api-specification.md`](06-api-specification.md#post-apimy-reportslogin). Since NIC is semi-public information in Sri Lanka, this means anyone who knows a citizen's NIC could view (not forge) their report history. Acceptable for a 4-hour civic-reporting demo; flagged as a production hardening gap, alongside storing NIC as plain text rather than encrypted at rest.
+
+**To create the admin test account:** create a user via the Supabase dashboard (Authentication → Add user) with a real admin email, then in the SQL editor:
 
 ```sql
 update profiles set role = 'admin' where id = '<the admin user''s uuid>';
@@ -130,24 +134,22 @@ create policy "admins_update_all"
   );
 ```
 
-> Note: since the backend performs writes with the **service role key**, RLS is bypassed for those requests by design (that's what the service role is for). RLS here is what protects any *direct* frontend reads with the anon key. Keep both — the backend enforces business rules (e.g. "citizens can only submit as themselves"), RLS is the database-level backstop.
+> Note: since the backend performs writes with the **service role key**, RLS is bypassed for those requests by design (that's what the service role is for). RLS here is what protects any *direct* frontend reads with the anon key — including the session a citizen gets from `POST /api/my-reports/login`. Keep both — the backend enforces business rules (e.g. "citizens can only submit as themselves"), RLS is the database-level backstop.
+
+## Contribution points
+
+`profiles.points` is a simple running counter, updated by the backend (not a DB trigger, for a hackathon-simple/easy-to-explain-live implementation — see `backend/src/lib/citizens.js#awardPoints`):
+
+- **+10** when a citizen submits a report (`POST /api/issues`)
+- **+15** bonus when an admin marks that report `Resolved` (`PATCH /api/issues/:id/status`)
 
 ## Sample seed data
 
-Run after the schema is in place, once at least one citizen account exists, so the admin dashboard isn't empty during the demo:
+See [`backend/database/seed.sql`](../../backend/database/seed.sql) — run it after the schema is in place, once at least one citizen account exists, so the feed and admin dashboard aren't empty during the demo.
 
-```sql
-insert into civic_issues (citizen_id, category, ward, landmark, description, status, ai_priority, ai_department, ai_reason)
-values
-  ('<citizen uuid>', 'Garbage', 'Colombo 06', 'Near Wellawatte market', 'Large uncollected garbage pile attracting stray dogs and mosquitoes for over a week.', 'Pending', 'Critical', 'Public Health', 'Standing waste near a market poses a dengue and sanitation risk.'),
-  ('<citizen uuid>', 'Road', 'Nugegoda', 'Opposite the bus stand', 'Deep pothole causing two-wheeler accidents during evening traffic.', 'In Progress', 'Medium', 'Roads & Infrastructure', 'Accident risk but not an immediate public health hazard.'),
-  ('<citizen uuid>', 'Lighting', 'Maharagama', 'Access road to the housing scheme', 'Streetlight has been off for three weeks, area is unsafe at night.', 'Pending', 'Medium', 'Electrical Maintenance', 'Safety concern, not urgent health risk.'),
-  ('<citizen uuid>', 'Water', 'Dehiwala', 'Near the railway crossing', 'Burst pipe flooding the road since yesterday morning.', 'Resolved', 'Critical', 'Water Supply', 'Active water loss and road hazard required immediate response.');
-```
-
-## Cloudflare R2 setup (Member 3)
+## Cloudflare R2 setup (Bhanuka Samarasinghe)
 
 1. Create a bucket, e.g. `resolve-lk-photos`.
 2. Enable public access (or connect the bucket to a public `r2.dev` subdomain / custom domain) so stored photo URLs are directly viewable.
 3. Create an R2 API token (Account → R2 → Manage API tokens) with read/write access scoped to this bucket.
-4. Hand the following to Member 4 for the backend `.env`: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL_BASE`.
+4. Hand the following to Hasitha for the backend `.env`: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL_BASE`.
