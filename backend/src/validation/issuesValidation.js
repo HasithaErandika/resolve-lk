@@ -4,9 +4,13 @@ const CATEGORIES = ['Garbage', 'Road', 'Water', 'Lighting', 'Drainage', 'Sewerag
 const STATUSES = ['Pending', 'In Progress', 'Resolved'];
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function validateNewIssue(body) {
+export function validateNewIssue(body, hasPhoto) {
   const errors = {};
   const { nic, email, category, ward, landmark, description, latitude, longitude } = body;
+
+  if (!hasPhoto) {
+    errors.photo = 'Please attach a photo of the issue.';
+  }
 
   if (!nic || !isValidNic(nic)) {
     errors.nic = 'Please enter a valid NIC number: either 9 digits followed by V/X, or 12 digits.';
