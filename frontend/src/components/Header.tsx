@@ -1,7 +1,8 @@
+import { Link } from 'react-router-dom'
+
 const LINKS = [
-  { href: '#problem', label: 'The Problem' },
-  { href: '#feed', label: 'Reported Issues' },
-  { href: '#report', label: 'Report an Issue' },
+  { to: '/feed', label: 'Reported Issues' },
+  { to: '/my-reports', label: 'My Reports' },
 ]
 
 interface HeaderProps {
@@ -11,13 +12,13 @@ interface HeaderProps {
 export function Header({ onNavigateAdmin }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 border-b border-bark/10 bg-birch/90 backdrop-blur">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-        <a href="#top" className="flex items-center gap-2.5">
+      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+        <Link to="/" className="flex items-center gap-2.5">
           <img src="/resolve-lk-logo.png" alt="" className="h-9 w-9" />
           <span className="text-lg font-bold tracking-tight text-bark">
             Resolve <span className="text-pumpkin">LK</span>
           </span>
-        </a>
+        </Link>
 
         <nav className="flex items-center gap-4 sm:gap-6">
           <div className="hidden items-center gap-6 md:flex">
