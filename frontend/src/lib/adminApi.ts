@@ -22,6 +22,7 @@ export async function fetchAdminIssues(
   if (token && token !== 'demo-admin-token') {
     try {
       const url = new URL(`${API_BASE_URL}/api/issues`)
+      url.searchParams.set('pageSize', '100')
       if (filters?.category && filters.category !== 'All') {
         url.searchParams.set('category', filters.category)
       }
@@ -40,9 +41,10 @@ export async function fetchAdminIssues(
       })
 
       if (res.ok) {
-        const rawData = await res.json()
-        if (Array.isArray(rawData)) {
-          let normalized = rawData.map(normalizeIssue)
+        // Backend returns a paginated envelope: { issues, page, pageSize, total }
+        const rawData: { issues?: unknown } = await res.json()
+        if (Array.isArray(rawData.issues)) {
+          let normalized = rawData.issues.map(normalizeIssue)
           if (filters?.priority && filters.priority !== 'All') {
             normalized = normalized.filter((item) => item.aiPriority === filters.priority)
           }
