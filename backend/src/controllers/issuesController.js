@@ -43,7 +43,7 @@ export const listPublicIssues = asyncHandler(async (req, res) => {
 
 export const listIssues = asyncHandler(async (req, res) => {
   const result = await issueService.listIssuesForViewer(req.profile, req.query);
-  res.json(result);
+  res.json(req.profile.role === 'admin' ? result : { ...result, points: req.profile.points });
 });
 
 export const getIssue = asyncHandler(async (req, res) => {

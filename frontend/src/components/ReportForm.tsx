@@ -3,6 +3,8 @@ import { CATEGORIES } from '../types/issue'
 import { WARDS } from '../data/wards'
 import { validateReportForm, type ReportFormErrors, type ReportFormValues } from '../lib/validation'
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'
+
 const INITIAL_VALUES: ReportFormValues = {
   nic: '',
   email: '',
@@ -18,8 +20,10 @@ export function ReportForm() {
   const [values, setValues] = useState<ReportFormValues>(INITIAL_VALUES)
   const [errors, setErrors] = useState<ReportFormErrors>({})
   const [photoName, setPhotoName] = useState<string | null>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [state, setState] = useState<SubmitState>('idle')
   const [points, setPoints] = useState(0)
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   function handleChange(field: keyof ReportFormValues) {
     return (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -28,7 +32,9 @@ export function ReportForm() {
   }
 
   function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
-    setPhotoName(event.target.files?.[0]?.name ?? null)
+    const file = event.target.files?.[0] ?? null
+    setPhotoFile(file)
+    setPhotoName(file?.name ?? null)
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -37,19 +43,46 @@ export function ReportForm() {
     setErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) return
 
+    setSubmitError(null)
     setState('submitting')
-    // TODO: replace with a real POST /api/issues call once the backend is
-    // live — see docs/srs/06-api-specification.md. Response includes
-    // `contributor_points`, used below.
-    await new Promise((resolve) => setTimeout(resolve, 900))
-    setPoints((prev) => prev + 10)
-    setState('success')
+
+    const formData = new FormData()
+    formData.append('nic', values.nic.trim())
+    formData.append('email', values.email.trim())
+    formData.append('category', values.category)
+    formData.append('ward', values.ward)
+    formData.append('landmark', values.landmark)
+    formData.append('description', values.description)
+    if (photoFile) formData.append('photo', photoFile)
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/issues`, {
+        method: 'POST',
+        body: formData,
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        if (data.errors) setErrors(data.errors)
+        setSubmitError(data.error || 'Could not submit your report. Please check the form and try again.')
+        setState('idle')
+        return
+      }
+
+      setPoints(data.contributor_points ?? 0)
+      setState('success')
+    } catch {
+      setSubmitError('Could not reach the server. Please check your connection and try again.')
+      setState('idle')
+    }
   }
 
   function reportAnother() {
     setValues(INITIAL_VALUES)
     setErrors({})
     setPhotoName(null)
+    setPhotoFile(null)
+    setSubmitError(null)
     setState('idle')
   }
 
@@ -170,6 +203,10 @@ export function ReportForm() {
           </label>
           <input id="photo" type="file" accept="image/*" onChange={handlePhoto} className="hidden" />
         </Field>
+
+        {submitError && (
+          <p className="rounded-lg bg-maple/10 px-3 py-2 text-sm font-medium text-maple">{submitError}</p>
+        )}
 
         <button
           type="submit"

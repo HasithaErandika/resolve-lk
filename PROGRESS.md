@@ -34,9 +34,9 @@ Reminder: admins never self-register. Admin accounts are created manually in the
 | Create Supabase project | Done | Connected and verified working |
 | Run `backend/database/migrations/001` and `002` | Done | `profiles` (nic, points, role), `civic_issues`, triggers, RLS, `increment_points` RPC, search indexes — all verified live |
 | Configure Supabase Auth | Done | Metadata → `profiles` trigger confirmed working for backend-provisioned citizens |
-| Seed the one admin test account | Not Started | Create user in Supabase dashboard manually, then `update profiles set role = 'admin' ...` — no self-registration |
+| Seed the one admin test account | Done | `wickramasinghe.erandika@gmail.com` promoted to `role='admin'` — real admin login now works, not just the demo shortcut |
 | Create & configure Cloudflare R2 bucket | Done | Bucket `resolve-lk` created, public r2.dev access enabled, credentials handed to Hasitha and verified with a live test upload |
-| Run `backend/database/seed.sql` | Not Started | So the feed/dashboard aren't empty for the demo |
+| Run `backend/database/seed.sql` | Done | 8 sample issues seeded across all 4 categories, all 3 statuses, 3 real citizen accounts |
 | Verify RLS with both roles | Done | Verified at the application layer during backend end-to-end testing — cross-citizen access correctly 404s, non-admin PATCH correctly 403s |
 
 ## Hasitha Erandika — Backend & AI Integration

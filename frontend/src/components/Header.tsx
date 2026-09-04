@@ -5,11 +5,7 @@ const LINKS = [
   { to: '/my-reports', label: 'My Reports' },
 ]
 
-interface HeaderProps {
-  onNavigateAdmin?: () => void
-}
-
-export function Header({ onNavigateAdmin }: HeaderProps) {
+export function Header() {
   return (
     <header className="sticky top-0 z-40 border-b border-bark/10 bg-birch/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
@@ -22,20 +18,19 @@ export function Header({ onNavigateAdmin }: HeaderProps) {
 
         <nav className="flex items-center gap-4 sm:gap-6">
           <div className="hidden items-center gap-6 md:flex">
-            {LINKS.slice(0, 2).map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
+            {LINKS.map((link) => (
+              <Link
+                key={link.to}
+                to={link.to}
                 className="text-sm font-medium text-bark/70 hover:text-bark transition"
               >
                 {link.label}
-              </a>
+              </Link>
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={onNavigateAdmin}
+          <Link
+            to="/admin"
             className="flex items-center gap-1.5 rounded-lg border border-bark/15 bg-white px-3 py-1.5 text-xs sm:text-sm font-semibold text-bark hover:border-pumpkin hover:text-pumpkin transition"
           >
             <svg viewBox="0 0 20 20" className="h-4 w-4 text-pumpkin" fill="currentColor">
@@ -46,17 +41,16 @@ export function Header({ onNavigateAdmin }: HeaderProps) {
               />
             </svg>
             Admin Portal
-          </button>
+          </Link>
 
-          <a
-            href="#report"
+          <Link
+            to="/report"
             className="rounded-lg bg-pumpkin px-3.5 py-1.5 text-xs sm:text-sm font-semibold text-birch shadow-sm shadow-pumpkin/30 transition hover:bg-pumpkin/90"
           >
             Report Issue
-          </a>
+          </Link>
         </nav>
       </div>
     </header>
   )
 }
-

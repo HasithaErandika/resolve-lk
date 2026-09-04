@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { IssueCard } from '../components/IssueCard'
-import type { CivicIssue } from '../types/issue'
+import { type CivicIssue, normalizeIssue } from '../types/issue'
+import { isValidNic } from '../lib/validation'
+import { supabase } from '../lib/supabase'
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'
 
 export function MyReports() {
   const [nic, setNic] = useState('')
@@ -14,24 +18,55 @@ export function MyReports() {
     e.preventDefault()
     setError(null)
 
-    if (!/^\d{9}[vVxX]|\d{12}$/.test(nic.trim())) {
-      setError('Please enter a valid NIC format')
+    if (!isValidNic(nic)) {
+      setError('Please enter a valid NIC number — either 9 digits followed by V/X, or 12 digits.')
       return
     }
 
     setLoading(true)
     try {
-      // TODO: Replace with real POST /api/my-reports/login call
-      // and supabase.auth.setSession() when backend is integrated.
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      const loginRes = await fetch(`${API_BASE_URL}/api/my-reports/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nic: nic.trim() }),
+      })
+      const loginData = await loginRes.json()
+
+      if (!loginRes.ok) {
+        setError(loginData.error || loginData.errors?.nic || 'Could not sign you in. Please try again.')
+        return
+      }
+
+      const { session } = loginData
+      await supabase.auth.setSession({
+        access_token: session.access_token,
+        refresh_token: session.refresh_token,
+      })
+
+      const issuesRes = await fetch(`${API_BASE_URL}/api/issues?pageSize=100`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      })
+      const issuesData = await issuesRes.json()
+
+      if (issuesRes.ok) {
+        setReports(Array.isArray(issuesData.issues) ? issuesData.issues.map(normalizeIssue) : [])
+        setPoints(issuesData.points ?? 0)
+      }
+
       setLoggedIn(true)
-      setPoints(25) // Sample points
-      setReports([]) // Empty or sample issues
-    } catch (err) {
-      setError('Failed to log in. Please try again.')
+    } catch {
+      setError('Could not reach the server. Please check your connection and try again.')
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut()
+    setLoggedIn(false)
+    setReports([])
+    setPoints(0)
+    setNic('')
   }
 
   if (loggedIn) {
@@ -48,13 +83,13 @@ export function MyReports() {
               </p>
             </div>
             <button
-              onClick={() => setLoggedIn(false)}
+              onClick={handleSignOut}
               className="text-sm font-medium text-maple hover:underline"
             >
               Sign out
             </button>
           </div>
-          
+
           {reports.length === 0 ? (
             <div className="mt-10 rounded-2xl border border-dashed border-bark/20 bg-white/50 p-12 text-center shadow-sm">
               <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-bark/5 text-bark/40">
