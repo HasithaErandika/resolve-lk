@@ -11,14 +11,14 @@ const POINTS_BONUS_ON_RESOLVE = 15;
 
 export const createIssue = asyncHandler(async (req, res) => {
   const body = req.body || {};
-  const errors = validateNewIssue(body);
+  const errors = validateNewIssue(body, Boolean(req.file));
   if (Object.keys(errors).length > 0) throw AppError.badRequest(errors);
 
   const { nic, email, full_name: fullName, category, ward, landmark, description, latitude, longitude } = body;
 
   const citizen = await findOrCreateCitizenByNic({ nic: nic.trim(), email: email.trim(), fullName });
 
-  const photoUrl = req.file ? await uploadIssuePhoto(req.file) : null;
+  const photoUrl = await uploadIssuePhoto(req.file);
   const triage = await triageIssue({ category, description });
 
   const issue = await issueService.createIssue({

@@ -11,7 +11,7 @@ export function errorHandler(err, req, res, next) { // eslint-disable-line no-un
   if (err instanceof multer.MulterError) {
     const message =
       err.code === 'LIMIT_FILE_SIZE' ? 'Photo must be 5MB or smaller.' : 'Could not process the uploaded file.';
-    return res.status(400).json({ errors: { photo: message } });
+    return res.status(400).json({ error: message, errors: { photo: message } });
   }
 
   console.error(err);

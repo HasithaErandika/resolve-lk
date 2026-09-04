@@ -21,10 +21,14 @@ export interface ReportFormValues {
   description: string
 }
 
-export type ReportFormErrors = Partial<Record<keyof ReportFormValues, string>>
+export type ReportFormErrors = Partial<Record<keyof ReportFormValues, string>> & { photo?: string }
 
-export function validateReportForm(values: ReportFormValues): ReportFormErrors {
+export function validateReportForm(values: ReportFormValues, hasPhoto: boolean): ReportFormErrors {
   const errors: ReportFormErrors = {}
+
+  if (!hasPhoto) {
+    errors.photo = 'Please attach a photo of the issue.'
+  }
 
   if (!values.nic || !isValidNic(values.nic)) {
     errors.nic = 'Please enter a valid NIC number: either 9 digits followed by V/X, or 12 digits.'

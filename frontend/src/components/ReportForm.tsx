@@ -98,7 +98,7 @@ export function ReportForm() {
     event.preventDefault()
 
     const candidate: ReportFormValues = { ...values, ward: effectiveWard() }
-    const validationErrors = validateReportForm(candidate)
+    const validationErrors = validateReportForm(candidate, Boolean(photoFile))
     if (values.ward === 'Other' && !otherWard.trim()) {
       validationErrors.ward = 'Please specify your ward/zone.'
     }
@@ -307,7 +307,7 @@ export function ReportForm() {
           <p className="mt-1 text-xs text-bark/40">{values.description.trim().length}/20 characters minimum</p>
         </Field>
 
-        <Field label="Photo (optional)" htmlFor="photo">
+        <Field label="Photo" htmlFor="photo" error={errors.photo}>
           <label
             htmlFor="photo"
             className="flex cursor-pointer items-center justify-between rounded-lg border border-dashed border-bark/20 bg-white px-4 py-3 text-sm text-bark/60 hover:border-pumpkin/40"
