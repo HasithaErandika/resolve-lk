@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useAdminAuth } from '../../context/useAdminAuth'
+import { useOfficerAuth } from '../../context/useOfficerAuth'
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -8,8 +8,8 @@ interface FieldErrors {
   password?: string
 }
 
-export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
-  const { signIn, isLoading } = useAdminAuth()
+export function OfficerLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
+  const { signIn, isLoading } = useOfficerAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -19,7 +19,7 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
   function validate(): FieldErrors {
     const errors: FieldErrors = {}
     if (!email.trim()) {
-      errors.email = 'Please enter your municipal staff email.'
+      errors.email = 'Please enter your official email address.'
     } else if (!EMAIL_REGEX.test(email.trim())) {
       errors.email = 'Please enter a valid email address.'
     }
@@ -49,7 +49,6 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
   return (
     <div className="flex min-h-[80vh] items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-        {/* Top return link */}
         <div className="mb-6 flex items-center justify-between">
           <button
             type="button"
@@ -63,29 +62,22 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
                 clipRule="evenodd"
               />
             </svg>
-            Back to Public Portal
+            Back to public site
           </button>
           <span className="rounded-full bg-pumpkin/10 px-2.5 py-0.5 text-xs font-semibold text-pumpkin">
-            Restricted Access
+            Restricted access
           </span>
         </div>
 
-        {/* Card */}
         <div className="rounded-3xl border border-bark/10 bg-white p-8 shadow-xl shadow-bark/5 sm:p-10">
-          {/* Logo & Header */}
           <div className="text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-bark text-birch shadow-md shadow-bark/20">
               <img src="/resolve-lk-logo.png" alt="" className="h-9 w-9" />
             </div>
-            <h1 className="mt-5 text-2xl font-extrabold tracking-tight text-bark">
-              Municipal Console
-            </h1>
-            <p className="mt-1.5 text-xs text-bark/60">
-              Pradeshiya Sabha and Municipal Council Operations
-            </p>
+            <h1 className="mt-5 text-2xl font-extrabold tracking-tight text-bark">Officer Login</h1>
+            <p className="mt-1.5 text-xs text-bark/60">Municipal Council and Provincial Government Operations</p>
           </div>
 
-          {/* Form-level error notice (auth failure, access denied, network issue) */}
           {formError && (
             <div className="mt-6 rounded-xl border border-maple/20 bg-maple/10 p-3.5 text-xs text-maple">
               <div className="flex items-start gap-2.5">
@@ -101,14 +93,13 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
             </div>
           )}
 
-          {/* Form */}
           <form onSubmit={handleSubmit} className="mt-7 space-y-4" noValidate>
             <div>
-              <label htmlFor="admin-email" className="block text-xs font-semibold text-bark/80">
-                Staff Email Address
+              <label htmlFor="officer-email" className="block text-xs font-semibold text-bark/80">
+                Official Email Address
               </label>
               <input
-                id="admin-email"
+                id="officer-email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -120,21 +111,19 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
                     : 'border-bark/15 focus:border-pumpkin focus:ring-pumpkin/20'
                 }`}
               />
-              {fieldErrors.email && (
-                <p className="mt-1.5 text-xs font-medium text-maple">{fieldErrors.email}</p>
-              )}
+              {fieldErrors.email && <p className="mt-1.5 text-xs font-medium text-maple">{fieldErrors.email}</p>}
             </div>
 
             <div>
-              <label htmlFor="admin-password" className="block text-xs font-semibold text-bark/80">
+              <label htmlFor="officer-password" className="block text-xs font-semibold text-bark/80">
                 Password
               </label>
               <input
-                id="admin-password"
+                id="officer-password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
+                placeholder="Enter your password"
                 autoComplete="current-password"
                 className={`mt-1.5 w-full rounded-xl border bg-white px-3.5 py-2.5 text-sm text-bark placeholder:text-bark/30 outline-none transition focus:ring-2 ${
                   fieldErrors.password
@@ -142,9 +131,7 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
                     : 'border-bark/15 focus:border-pumpkin focus:ring-pumpkin/20'
                 }`}
               />
-              {fieldErrors.password && (
-                <p className="mt-1.5 text-xs font-medium text-maple">{fieldErrors.password}</p>
-              )}
+              {fieldErrors.password && <p className="mt-1.5 text-xs font-medium text-maple">{fieldErrors.password}</p>}
             </div>
 
             <button
@@ -152,13 +139,13 @@ export function AdminLogin({ onBackToPublic }: { onBackToPublic: () => void }) {
               disabled={isSubmitting || isLoading}
               className="mt-2 w-full rounded-xl bg-pumpkin py-3 text-sm font-semibold text-birch shadow-md shadow-pumpkin/20 transition hover:bg-pumpkin/90 disabled:opacity-60"
             >
-              {isSubmitting ? 'Authenticating…' : 'Sign In as Administrator'}
+              {isSubmitting ? 'Signing in' : 'Sign in'}
             </button>
           </form>
 
           <p className="mt-6 text-center text-xs leading-relaxed text-bark/40">
-            Authorized municipal officers only. All actions and status modifications are logged and
-            audited.
+            Municipal Officer and Provincial Officer accounts are provisioned directly. There is no
+            self-registration. All status changes are logged and auditable.
           </p>
         </div>
       </div>

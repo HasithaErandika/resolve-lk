@@ -1,5 +1,5 @@
 -- 004_add_gps_coordinates.sql
--- Resolve LK — optional GPS tag on a report (captured via the browser's
+-- Resolve LK - optional GPS tag on a report (captured via the browser's
 -- Geolocation API on the report form, not a Maps/geocoding integration).
 -- Requires 001_init_schema.sql to have already been run.
 

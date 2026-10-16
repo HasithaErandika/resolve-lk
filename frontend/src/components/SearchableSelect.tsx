@@ -41,7 +41,7 @@ export function SearchableSelect({ id, value, onChange, options, placeholder, ha
         id={id}
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className={`flex w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-left text-sm outline-none transition focus:ring-2 ${
+        className={`flex w-full items-center justify-between rounded-lg border bg-white px-3 py-2 text-left text-base sm:text-sm outline-none transition focus:ring-2 ${
           hasError
             ? 'border-maple/50 focus:border-maple focus:ring-maple/20'
             : 'border-bark/15 focus:border-pumpkin focus:ring-pumpkin/20'
@@ -66,7 +66,7 @@ export function SearchableSelect({ id, value, onChange, options, placeholder, ha
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search…"
-              className="w-full rounded-md border border-bark/15 px-2.5 py-1.5 text-sm outline-none focus:border-pumpkin focus:ring-1 focus:ring-pumpkin/20"
+              className="w-full rounded-md border border-bark/15 px-2.5 py-2 text-base sm:text-sm outline-none focus:border-pumpkin focus:ring-1 focus:ring-pumpkin/20"
             />
           </div>
           <ul className="max-h-56 overflow-y-auto py-1">

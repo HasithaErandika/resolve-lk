@@ -1,74 +1,60 @@
-# PROGRESS.md — Live Task Tracker
+# PROGRESS.md - Live Task Tracker
 
-Update this as you go during the session — it's what "contribution from all registered members" gets judged against, alongside commit history. Status values: **Not Started**, **In Progress**, **Done**.
+> This tracker now reflects the governance-redesign build (Citizen -> Municipal Officer -> Provincial Officer -> System Administrator), the target contract described in `docs/srs/`. The prior hackathon-scoped build (flat citizen/admin, points, NIC-as-password) has been fully replaced in the codebase - see `history.md` for how the project got here.
+>
+> **What "Done" means below:** the code exists, type-checks/builds/lints clean, and was read back for internal consistency. It has **not** been run against a real Supabase project, R2 bucket, or Gemini API key in this environment (none of those credentials exist here) - that verification still has to happen against your actual project, the same way the original build's end-to-end testing did.
 
-Reminder: admins never self-register. Admin accounts are created manually in the Supabase dashboard and promoted with one SQL statement — see [`docs/srs/05-data-model.md`](docs/srs/05-data-model.md). There is no admin signup form to build.
+Status values: **Not Started**, **In Progress**, **Done (code only, not live-verified)**.
 
-## Seneja Thehansi — Citizen Experience
+Reminder: no role above Citizen self-registers. Municipal Officer accounts are provisioned by their Provincial Officer; Provincial Officer accounts by a System Administrator - see [`docs/srs/03-governance-and-roles.md`](docs/srs/03-governance-and-roles.md#roles-in-resolve-lk).
 
-| Task | Status | Notes |
-|---|---|---|
-| Scaffold Vite + React + Tailwind app | Done | `frontend/` — Vite, Tailwind v4, ESLint all wired up |
-| Landing page + problem explainer | In Progress | Static placeholder in `App.jsx`; needs real problem copy from `docs/srs/01-problem-statement.md` |
-| Public issue feed section | In Progress | Static sample cards in place; needs wiring to `GET /api/issues/public` |
-| Report form (NIC + email + issue fields) | In Progress | Form UI built, fields disabled; needs wiring to `POST /api/issues` + client-side validation |
-| "My Reports" page (NIC-only login) | Not Started | Calls `POST /api/my-reports/login`, then `supabase.auth.setSession()` |
-| Responsive check (mobile widths) | Not Started | |
-| Deploy frontend to Cloudflare Pages | Not Started | |
-
-## Jayashan Guruge — Admin Dashboard
+## Database (`backend/database/`)
 
 | Task | Status | Notes |
 |---|---|---|
-| Admin login (Supabase Auth, real email/password) | Done | Supabase Auth email/password wired, profile role check, demo evaluator login |
-| Dashboard table/board of all issues | Done | Interactive Table & Kanban views with summary metric KPI counters |
-| Search + category/status filter | Done | Keyword search across fields + category, status, priority, and ward filters |
-| Status update control (`Pending → In Progress → Resolved`) | Done | `PATCH /api/issues/:id/status` wired with +15 citizen point bonus toasts |
-| Surface AI priority/department/reason, flag Critical | Done | Critical alerts flagged with maple styling, department and Gemini reason displayed |
-| End-to-end test on live deployed URL | In Progress | Local verification passed; live deployment testing pending ship phase |
+| Migrations 005-009 (provinces, councils incl. lat/lon, extended `profiles`, `civic_issues` council/jurisdiction/SLA fields incl. PRDA, `issue_status_history`, `council_sla_stats` view, RLS, drop points) | Done (code only) | Written as a clean rebuild (006 `TRUNCATE`s `civic_issues`) per your call that only test data existed. Not yet run against a live project. |
+| `seed.sql` (provinces + councils reference data, incl. coordinates) | Done (code only) | 3 provinces, 5 real named councils (Colombo, Sri Jayawardenepura Kotte, Dehiwala-Mount Lavinia, Kandy, Galle). You asked to hold off correcting/expanding this further yourself. |
+| `seed.mjs` (officer + citizen accounts, sample issues incl. one `Reopened` and one `escalated`) | Done (code only) | Node script using the Supabase Admin API, since auth users can't be hand-inserted via SQL. Same note as above - not run live. |
 
-## Bhanuka Samarasinghe — Supabase & Storage Architect
+## Backend (`backend/src/`)
 
 | Task | Status | Notes |
 |---|---|---|
-| Create Supabase project | Done | Connected and verified working |
-| Run `backend/database/migrations/001` and `002` | Done | `profiles` (nic, points, role), `civic_issues`, triggers, RLS, `increment_points` RPC, search indexes — all verified live |
-| Configure Supabase Auth | Done | Metadata → `profiles` trigger confirmed working for backend-provisioned citizens |
-| Seed the one admin test account | Done | `wickramasinghe.erandika@gmail.com` promoted to `role='admin'` — real admin login now works, not just the demo shortcut |
-| Create & configure Cloudflare R2 bucket | Done | Bucket `resolve-lk` created, public r2.dev access enabled, credentials handed to Hasitha and verified with a live test upload |
-| Run `backend/database/seed.sql` | Done | 8 sample issues seeded across all 4 categories, all 3 statuses, 3 real citizen accounts |
-| Verify RLS with both roles | Done | Verified at the application layer during backend end-to-end testing — cross-citizen access correctly 404s, non-admin PATCH correctly 403s |
+| `services/slaService.js` (priority -> SLA due-dates) | Done | |
+| `services/triageService.js` (jurisdiction-aware AI triage, incl. PRDA/RDA road-name hinting via `lib/rdaRoads.js`) | Done | |
+| `lib/geo.js` + `services/councilService.js#findNearestCouncil` (Haversine council suggestion) | Done | |
+| `services/otpService.js` (Supabase-native OTP request/verify) | Done | Deviates from the original SRS sketch (no custom `otp_codes` table) - docs updated to match. |
+| `services/citizenService.js` (passwordless citizen provisioning) | Done | |
+| `services/issueService.js` (council/province scoping, full 6-state transition table, reopen escalation) | Done | |
+| `services/councilService.js` / `services/escalationService.js` (public listings/stats, escalation queue, officer provisioning) | Done | |
+| `middleware/auth.js` (`requireRole`, scope enforced in services) | Done | |
+| `validation/issuesValidation.js` (new statuses, `council_id`, `contact_email`, optional photo) | Done | |
+| Routes + controllers for issues, my-reports/otp, councils, provinces, provincial, admin | Done | |
+| `src/jobs/slaBreachJob.js` (`npm run sla:sweep`) | Done (code only) | Not wired into a live scheduler in this environment - documented as needing an hourly cron in production. |
+| `docs/openapi.js` | Done | |
+| Live end-to-end verification against a real Supabase/R2/Gemini project | **Not started** | No credentials available in this environment. |
 
-## Hasitha Erandika — Backend & AI Integration
-
-**Status: implemented, restructured, and verified end-to-end against the live Supabase project.**
-
-Layered architecture — `routes/` (wiring only) → `controllers/` (request/response) → `services/` (business logic) → `lib/` (external clients: Supabase, R2, Gemini). Shared concerns in `middleware/`, `utils/`, `config/`. Full OpenAPI spec in `src/docs/openapi.js`, served live at `/api-docs`.
+## Frontend (`frontend/src/`)
 
 | Task | Status | Notes |
 |---|---|---|
-| Express project skeleton, layered structure | Done | `backend/src/{app,server}.js`, `routes/`, `controllers/`, `services/`, `lib/`, `middleware/`, `utils/`, `config/` |
-| `POST /api/issues` (public, find-or-create by NIC, upload, triage, insert, award points) | Done | `controllers/issuesController.js` + `services/citizenService.js`/`issueService.js` |
-| `GET /api/issues/public` (anonymous feed, paginated + filterable) | Done | |
-| `GET /api/issues`, `GET /api/issues/:id`, `PATCH /api/issues/:id/status` | Done | Paginated; points bonus on Resolved; malformed `:id` now rejected with 400 instead of leaking a raw DB error |
-| `POST /api/my-reports/login` (NIC-only sign-in) | Done | `controllers/myReportsController.js` |
-| R2 upload integration | Done | `services/storageService.js`, verified with a live upload |
-| Gemini API triage integration | Done | `services/triageService.js`, model `gemini-3.1-flash-lite` (cheap/stable tier), with fallback on failure |
-| Atomic contribution-points increment | Done | Postgres `increment_points` RPC (`database/migrations/002...`) instead of read-then-write — no race under concurrent submissions |
-| `requireAuth` / `attachProfile` / `requireAdmin` middleware | Done | Profile fetched once per request via `attachProfile`, not re-queried per route |
-| Centralized error handling | Done | `AppError` + `errorHandler` — consistent `{error, errors}` shape everywhere, including Multer errors |
-| Swagger / OpenAPI docs | Done | `GET /api-docs` |
-| Connect real R2 credentials in `.env` | Done | Verified with a live upload — `PUT` succeeded and the resulting URL returned `200 OK` publicly |
-| Connect real Supabase credentials in `.env` | Done | Bhanuka's project connected and migrations 001+002 applied |
-| Connect real Gemini API key in `.env` | Done | Verified with a live triage call |
-| End-to-end verification against the live Supabase project | Done | Full citizen report → AI triage → public feed → My Reports login → admin list/get/status-update/points-bonus → cross-citizen isolation (404) → non-admin PATCH (403) all tested live; two real bugs found and fixed (empty-body crash, malformed-UUID `:id` leaking a raw DB error) — all test data cleaned up afterward |
-| Deploy backend to Choreo (fallback: Render) | Not Started | Ship phase |
+| Types (`types/issue.ts`, `types/council.ts`) | Done | |
+| Report form: council picker, Haversine "did you mean" suggestion, optional photo, `contact_email` | Done | |
+| "My Reports": two-step NIC + OTP flow, points removed, confirm/dispute actions on `Resolved` | Done | |
+| Public feed: SLA-transparency stats strip | Done | |
+| Council Directory page: real 29-council reference list by province, governance hierarchy explainer, legal framework references, verified contact info where sourced (Colombo only so far) | Done | |
+| Officer auth (`OfficerAuthContext`), `OfficerLogin`, `OfficerPortal` routing by role | Done | |
+| Municipal Officer dashboard (table + board views, council-scoped, single-next-status actions) | Done | |
+| Provincial Officer dashboard (escalation queue, Municipal Officer provisioning form) | Done | |
+| Professional header/footer, mobile nav, hero illustration (inline SVG, no external asset) | Done | |
+| Mobile input sizing fix (16px on small screens to prevent iOS zoom) across report/search/OTP forms | Done | |
+| `npx tsc -b`, `npm run build`, `npm run lint` | Done | All clean as of this build. |
+| Manual browser testing (desktop and mobile viewport) | **Not started** | No browser tooling available in this environment this session; you should click through both flows before treating this as final. |
 
 ## Shared / whole-team
 
 | Task | Status | Notes |
 |---|---|---|
-| Lock MVP scope | Done | See `docs/srs/03-scope-and-boundaries.md` |
-| Seed sample data for the demo | Not Started | `backend/database/seed.sql` |
-| Record 2-minute demo video | Not Started | |
-| Compile submission PDF | Not Started | See submission checklist in `PLAN.md` |
+| Lock the governance-redesign scope | Done | See `docs/srs/04-scope-and-boundaries.md` |
+| Seed sample data for a live demo | Not started (deliberately, on your instruction) | `backend/database/seed.sql` + `seed.mjs` exist and are correct against real council names, but you asked to hold off populating/correcting the data further yourself |
+| Record a demo video | Not started | |

@@ -1,5 +1,5 @@
 import type { CivicIssue } from '../types/issue'
-import { PriorityBadge, StatusBadge } from './Badge'
+import { PriorityBadge, StatusBadge, EscalatedBadge, RedirectBadge } from './Badge'
 
 interface IssueDetailModalProps {
   issue: CivicIssue
@@ -32,6 +32,8 @@ export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
               </span>
               <StatusBadge status={issue.status} />
               <PriorityBadge priority={issue.aiPriority} />
+              {issue.escalated && <EscalatedBadge />}
+              {issue.aiJurisdiction === 'redirect' && <RedirectBadge authority={issue.aiRedirectAuthority} />}
             </div>
             <h2 className="mt-2 text-xl font-bold text-bark sm:text-2xl">
               {issue.ward}, {issue.landmark}
@@ -95,7 +97,7 @@ export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
 
           <div
             className={`rounded-2xl p-5 border ${
-              issue.aiPriority === 'Critical'
+              issue.aiPriority === 'Critical' || issue.aiPriority === 'High'
                 ? 'bg-maple/5 border-maple/20'
                 : issue.aiPriority === 'Medium'
                 ? 'bg-golden/5 border-golden/25'
@@ -117,7 +119,9 @@ export function IssueDetailModal({ issue, onClose }: IssueDetailModalProps) {
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <div>
                 <span className="text-xs font-semibold text-bark/50">Assigned Department</span>
-                <p className="mt-0.5 text-sm font-bold text-bark">{issue.aiDepartment}</p>
+                <p className="mt-0.5 text-sm font-bold text-bark">
+                  {issue.aiDepartment ?? (issue.aiJurisdiction === 'redirect' ? `Referred to ${issue.aiRedirectAuthority}` : 'Not yet assigned')}
+                </p>
               </div>
               <div>
                 <span className="text-xs font-semibold text-bark/50">Priority</span>

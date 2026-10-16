@@ -4,26 +4,28 @@ import { Home } from './pages/Home'
 import { Report } from './pages/Report'
 import { Feed } from './pages/Feed'
 import { MyReports } from './pages/MyReports'
-import { AdminAuthProvider } from './context/AdminAuthContext'
-import { AdminPortal } from './components/admin/AdminPortal'
+import { CouncilDirectory } from './pages/CouncilDirectory'
+import { OfficerAuthProvider } from './context/OfficerAuthContext'
+import { OfficerPortal } from './components/officer/OfficerPortal'
 
-function AdminRoute() {
+function OfficerRoute() {
   const navigate = useNavigate()
-  return <AdminPortal onBackToPublic={() => navigate('/')} />
+  return <OfficerPortal onBackToPublic={() => navigate('/')} />
 }
 
 export default function App() {
   return (
-    <AdminAuthProvider>
+    <OfficerAuthProvider>
       <Routes>
         <Route element={<RootLayout />}>
           <Route path="/" element={<Home />} />
           <Route path="/report" element={<Report />} />
           <Route path="/feed" element={<Feed />} />
           <Route path="/my-reports" element={<MyReports />} />
+          <Route path="/councils" element={<CouncilDirectory />} />
         </Route>
-        <Route path="/admin/*" element={<AdminRoute />} />
+        <Route path="/officer/*" element={<OfficerRoute />} />
       </Routes>
-    </AdminAuthProvider>
+    </OfficerAuthProvider>
   )
 }

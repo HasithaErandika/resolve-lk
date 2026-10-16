@@ -1,6 +1,8 @@
 import { useState, useEffect, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
-import { AdminAuthContext, type AdminUser } from './adminAuthContextDef'
+import { OfficerAuthContext, type OfficerUser, type OfficerRole } from './officerAuthContextDef'
+
+const OFFICER_ROLES: OfficerRole[] = ['municipal_officer', 'provincial_officer', 'system_admin']
 
 function mapAuthError(error: { message?: string; status?: number } | null): string {
   const message = error?.message?.toLowerCase() ?? ''
@@ -20,19 +22,19 @@ function mapAuthError(error: { message?: string; status?: number } | null): stri
   return error?.message || 'Could not sign you in. Please try again.'
 }
 
-async function loadAdminProfile(userId: string) {
+async function loadOfficerProfile(userId: string) {
   const { data, error } = await supabase
     .from('profiles')
-    .select('role, full_name')
+    .select('role, full_name, council_id, province_id')
     .eq('id', userId)
     .single()
 
-  if (error || data?.role !== 'admin') return null
-  return data
+  if (error || !data || !OFFICER_ROLES.includes(data.role)) return null
+  return data as { role: OfficerRole; full_name: string | null; council_id: string | null; province_id: string | null }
 }
 
-export function AdminAuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AdminUser | null>(null)
+export function OfficerAuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<OfficerUser | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
 
@@ -44,13 +46,15 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         } = await supabase.auth.getSession()
 
         if (session?.user) {
-          const profile = await loadAdminProfile(session.user.id)
+          const profile = await loadOfficerProfile(session.user.id)
           if (profile) {
             setUser({
               id: session.user.id,
               email: session.user.email ?? '',
-              role: 'admin',
-              fullName: profile.full_name ?? 'Municipal Admin',
+              role: profile.role,
+              fullName: profile.full_name ?? undefined,
+              councilId: profile.council_id,
+              provinceId: profile.province_id,
             })
             setToken(session.access_token)
           }
@@ -78,21 +82,23 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: mapAuthError(error) }
       }
 
-      const profile = await loadAdminProfile(data.user.id)
+      const profile = await loadOfficerProfile(data.user.id)
       if (!profile) {
         await supabase.auth.signOut()
         setIsLoading(false)
         return {
           success: false,
-          error: 'Access denied: this account does not have municipal admin privileges.',
+          error: 'Access denied: this account does not have Municipal Officer, Provincial Officer, or System Administrator privileges.',
         }
       }
 
       setUser({
         id: data.user.id,
         email: data.user.email ?? email,
-        role: 'admin',
-        fullName: profile.full_name ?? 'Municipal Admin',
+        role: profile.role,
+        fullName: profile.full_name ?? undefined,
+        councilId: profile.council_id,
+        provinceId: profile.province_id,
       })
       setToken(data.session.access_token)
       setIsLoading(false)
@@ -117,8 +123,8 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AdminAuthContext.Provider value={{ user, token, isLoading, signIn, signOut }}>
+    <OfficerAuthContext.Provider value={{ user, token, isLoading, signIn, signOut }}>
       {children}
-    </AdminAuthContext.Provider>
+    </OfficerAuthContext.Provider>
   )
 }

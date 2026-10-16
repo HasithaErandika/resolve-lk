@@ -1,10 +1,9 @@
-import { supabaseAdmin, supabasePublic } from '../lib/supabaseClient.js';
-import { AppError } from '../utils/AppError.js';
+import { supabaseAdmin } from '../lib/supabaseClient.js';
 
 async function findProfileByNic(nic) {
   const { data, error } = await supabaseAdmin
     .from('profiles')
-    .select('id, points')
+    .select('id, contact_email')
     .eq('nic', nic)
     .maybeSingle();
 
@@ -12,61 +11,32 @@ async function findProfileByNic(nic) {
   return data;
 }
 
-export async function findOrCreateCitizenByNic({ nic, email, fullName }) {
+// Citizens never have a password - see docs/srs/03-governance-and-roles.md
+// #citizen-identity-what-stays-frictionless-and-what-changed. Access to
+// their own history is exclusively via NIC + OTP (services/otpService.js),
+// which requires a real email on the auth.users row to deliver a code to.
+export async function findOrCreateCitizenByNic({ nic, contactEmail, contactPhone, fullName }) {
   const existing = await findProfileByNic(nic);
   if (existing) return existing;
 
   const { data: created, error: createError } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    password: nic,
+    email: contactEmail,
     email_confirm: true,
-    user_metadata: { full_name: fullName || null, nic },
+    user_metadata: {
+      full_name: fullName || null,
+      nic,
+      contact_email: contactEmail,
+      contact_phone: contactPhone || null,
+      role: 'citizen',
+    },
   });
 
   if (createError) {
+    // Another concurrent submission with the same NIC may have won the race.
     const retry = await findProfileByNic(nic);
     if (retry) return retry;
     throw createError;
   }
 
-  return { id: created.user.id, points: 0 };
-}
-
-export async function awardPoints(citizenId, amount) {
-  const { data, error } = await supabaseAdmin.rpc('increment_points', {
-    p_citizen_id: citizenId,
-    p_amount: amount,
-  });
-
-  if (error) throw error;
-  return data;
-}
-
-export async function loginCitizenByNic(nic) {
-  const { data: profile, error: profileError } = await supabaseAdmin
-    .from('profiles')
-    .select('id')
-    .eq('nic', nic)
-    .maybeSingle();
-
-  if (profileError) throw profileError;
-  if (!profile) {
-    throw AppError.notFound('No account found for this NIC. Report an issue first to create one.');
-  }
-
-  const { data: authUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(profile.id);
-  if (getUserError || !authUser?.user?.email) {
-    throw new AppError(500, 'Could not find an email on file for this NIC. Please contact support.');
-  }
-
-  const { data: signInData, error: signInError } = await supabasePublic.auth.signInWithPassword({
-    email: authUser.user.email,
-    password: nic,
-  });
-
-  if (signInError || !signInData?.session) {
-    throw new AppError(500, 'Could not sign you in. Please try again.');
-  }
-
-  return signInData.session;
+  return { id: created.user.id, contact_email: contactEmail };
 }

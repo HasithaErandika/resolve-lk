@@ -1,5 +1,5 @@
 -- 002_points_rpc_and_search_indexes.sql
--- Resolve LK — contribution-points atomic increment + search/sort indexes.
+-- Resolve LK - contribution-points atomic increment + search/sort indexes.
 -- Requires 001_init_schema.sql to have already been run.
 
 -- =========================================================
@@ -18,7 +18,7 @@ create index if not exists civic_issues_landmark_trgm_idx
   on civic_issues using gin (landmark gin_trgm_ops);
 
 -- =========================================================
--- Contribution points — atomic increment
+-- Contribution points - atomic increment
 -- Called via supabase.rpc('increment_points', {...}) instead of a
 -- read-then-write from the backend, so two reports (or a report landing at
 -- the same moment as a Resolved bonus) can never race and drop an update.

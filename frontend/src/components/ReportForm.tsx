@@ -1,15 +1,17 @@
-import { useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { CATEGORIES } from '../types/issue'
-import { WARDS } from '../data/wards'
+import type { Council, NearestCouncilSuggestion } from '../types/council'
 import { validateReportForm, type ReportFormErrors, type ReportFormValues } from '../lib/validation'
+import { fetchCouncils, fetchNearestCouncil } from '../lib/officerApi'
 import { SearchableSelect } from './SearchableSelect'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'
 
 const INITIAL_VALUES: ReportFormValues = {
   nic: '',
-  email: '',
+  contactEmail: '',
   category: '',
+  councilId: '',
   ward: '',
   landmark: '',
   description: '',
@@ -25,27 +27,37 @@ interface Coordinates {
 
 export function ReportForm() {
   const [values, setValues] = useState<ReportFormValues>(INITIAL_VALUES)
-  const [otherWard, setOtherWard] = useState('')
   const [errors, setErrors] = useState<ReportFormErrors>({})
   const [photoName, setPhotoName] = useState<string | null>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [state, setState] = useState<SubmitState>('idle')
-  const [points, setPoints] = useState(0)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [location, setLocation] = useState<Coordinates | null>(null)
   const [locationStatus, setLocationStatus] = useState<LocationStatus>('idle')
   const [locationError, setLocationError] = useState<string | null>(null)
+  const [councils, setCouncils] = useState<Council[]>([])
+  const [suggestedCouncil, setSuggestedCouncil] = useState<NearestCouncilSuggestion | null>(null)
+
+  useEffect(() => {
+    void fetchCouncils().then(setCouncils)
+  }, [])
+
+  const councilOptionLabels = useMemo(
+    () => councils.map((c) => `${c.name} (${c.district} District)`),
+    [councils]
+  )
+  const councilLabelById = useMemo(
+    () => new Map(councils.map((c) => [c.id, `${c.name} (${c.district} District)`])),
+    [councils]
+  )
+  const councilIdByLabel = useMemo(
+    () => new Map(councils.map((c) => [`${c.name} (${c.district} District)`, c.id])),
+    [councils]
+  )
 
   function handleChange(field: keyof ReportFormValues) {
     return (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       setValues((prev) => ({ ...prev, [field]: event.target.value }))
-    }
-  }
-
-  function setField(field: keyof ReportFormValues) {
-    return (value: string) => {
-      setValues((prev) => ({ ...prev, [field]: value }))
-      if (field === 'ward' && value !== 'Other') setOtherWard('')
     }
   }
 
@@ -66,9 +78,15 @@ export function ReportForm() {
     setLocationError(null)
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setLocation({ lat: position.coords.latitude, lng: position.coords.longitude })
+      async (position) => {
+        const coords = { lat: position.coords.latitude, lng: position.coords.longitude }
+        setLocation(coords)
         setLocationStatus('tagged')
+
+        const nearest = await fetchNearestCouncil(coords.lat, coords.lng)
+        if (nearest && nearest.id !== values.councilId) {
+          setSuggestedCouncil(nearest)
+        }
       },
       (error) => {
         setLocationStatus('error')
@@ -88,20 +106,19 @@ export function ReportForm() {
     setLocation(null)
     setLocationStatus('idle')
     setLocationError(null)
+    setSuggestedCouncil(null)
   }
 
-  function effectiveWard() {
-    return values.ward === 'Other' ? otherWard.trim() : values.ward
+  function acceptSuggestedCouncil() {
+    if (!suggestedCouncil) return
+    setValues((prev) => ({ ...prev, councilId: suggestedCouncil.id }))
+    setSuggestedCouncil(null)
   }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
 
-    const candidate: ReportFormValues = { ...values, ward: effectiveWard() }
-    const validationErrors = validateReportForm(candidate, Boolean(photoFile))
-    if (values.ward === 'Other' && !otherWard.trim()) {
-      validationErrors.ward = 'Please specify your ward/zone.'
-    }
+    const validationErrors = validateReportForm(values)
     setErrors(validationErrors)
     if (Object.keys(validationErrors).length > 0) return
 
@@ -110,9 +127,10 @@ export function ReportForm() {
 
     const formData = new FormData()
     formData.append('nic', values.nic.trim())
-    formData.append('email', values.email.trim())
+    formData.append('contact_email', values.contactEmail.trim())
     formData.append('category', values.category)
-    formData.append('ward', candidate.ward)
+    formData.append('council_id', values.councilId)
+    formData.append('ward', values.ward.trim())
     formData.append('landmark', values.landmark)
     formData.append('description', values.description)
     if (photoFile) formData.append('photo', photoFile)
@@ -135,7 +153,6 @@ export function ReportForm() {
         return
       }
 
-      setPoints(data.contributor_points ?? 0)
       setState('success')
     } catch {
       setSubmitError('Could not reach the server. Please check your connection and try again.')
@@ -145,7 +162,6 @@ export function ReportForm() {
 
   function reportAnother() {
     setValues(INITIAL_VALUES)
-    setOtherWard('')
     setErrors({})
     setPhotoName(null)
     setPhotoFile(null)
@@ -164,9 +180,8 @@ export function ReportForm() {
         </span>
         <h3 className="mt-5 text-xl font-bold text-bark">Report submitted</h3>
         <p className="mt-2 text-sm text-bark/60">
-          Your report has been triaged and added to the public queue. You earned{' '}
-          <span className="font-semibold text-pumpkin">+10 contribution points</span>. Total:{' '}
-          <span className="font-semibold text-bark">{points}</span>.
+          Your report has been triaged and added to the council&apos;s tracked queue. You can check its
+          status any time from the My Reports page.
         </p>
         <button
           type="button"
@@ -194,15 +209,16 @@ export function ReportForm() {
             />
             <p className="mt-1 text-xs text-bark/40">Old format: 9 digits + V/X (720890283V). New format: 12 digits (200112345678).</p>
           </Field>
-          <Field label="Email" htmlFor="email" error={errors.email}>
+          <Field label="Email" htmlFor="contact-email" error={errors.contactEmail}>
             <input
-              id="email"
-              value={values.email}
-              onChange={handleChange('email')}
+              id="contact-email"
+              value={values.contactEmail}
+              onChange={handleChange('contactEmail')}
               type="email"
               placeholder="you@example.com"
-              className={inputClass(Boolean(errors.email))}
+              className={inputClass(Boolean(errors.contactEmail))}
             />
+            <p className="mt-1 text-xs text-bark/40">Used only to send a one-time code if you check your report history later.</p>
           </Field>
         </div>
 
@@ -211,35 +227,62 @@ export function ReportForm() {
             <SearchableSelect
               id="category"
               value={values.category}
-              onChange={setField('category')}
+              onChange={(value) => setValues((prev) => ({ ...prev, category: value }))}
               options={CATEGORIES}
               placeholder="Select a category"
               hasError={Boolean(errors.category)}
             />
           </Field>
-          <Field label="Ward / Zone" htmlFor="ward" error={values.ward !== 'Other' ? errors.ward : undefined}>
+          <Field label="Municipal Council" htmlFor="council" error={errors.councilId}>
             <SearchableSelect
-              id="ward"
-              value={values.ward}
-              onChange={setField('ward')}
-              options={WARDS}
-              placeholder="Select a ward/zone"
-              hasError={Boolean(errors.ward)}
+              id="council"
+              value={councilLabelById.get(values.councilId) ?? ''}
+              onChange={(label) => {
+                const id = councilIdByLabel.get(label)
+                if (id) setValues((prev) => ({ ...prev, councilId: id }))
+              }}
+              options={councilOptionLabels}
+              placeholder={councils.length === 0 ? 'Loading councils…' : 'Select the responsible council'}
+              hasError={Boolean(errors.councilId)}
             />
-            {values.ward === 'Other' && (
-              <div className="mt-2">
-                <input
-                  value={otherWard}
-                  onChange={(e) => setOtherWard(e.target.value)}
-                  type="text"
-                  placeholder="Type your ward/zone"
-                  className={inputClass(Boolean(errors.ward))}
-                />
-                {errors.ward && <p className="mt-1 text-xs font-medium text-maple">{errors.ward}</p>}
-              </div>
-            )}
           </Field>
         </div>
+
+        {suggestedCouncil && (
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-pumpkin/30 bg-pumpkin/5 px-4 py-3 text-sm">
+            <span className="text-bark/80">
+              Your location looks closer to <strong>{suggestedCouncil.name}</strong> (about{' '}
+              {suggestedCouncil.distanceKm.toFixed(1)} km away). Did you mean to select this council?
+            </span>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={acceptSuggestedCouncil}
+                className="rounded-lg bg-pumpkin px-3 py-1.5 text-xs font-semibold text-birch"
+              >
+                Use this council
+              </button>
+              <button
+                type="button"
+                onClick={() => setSuggestedCouncil(null)}
+                className="rounded-lg border border-bark/15 px-3 py-1.5 text-xs font-semibold text-bark/60"
+              >
+                Keep my selection
+              </button>
+            </div>
+          </div>
+        )}
+
+        <Field label="Ward or area" htmlFor="ward" error={errors.ward}>
+          <input
+            id="ward"
+            value={values.ward}
+            onChange={handleChange('ward')}
+            type="text"
+            placeholder="e.g. Colombo 06"
+            className={inputClass(Boolean(errors.ward))}
+          />
+        </Field>
 
         <Field label="Nearest landmark" htmlFor="landmark" error={errors.landmark}>
           <input
@@ -290,7 +333,7 @@ export function ReportForm() {
             )}
             {locationError && <p className="mt-1.5 text-xs font-medium text-maple">{locationError}</p>}
             <p className="mt-1.5 text-xs text-bark/40">
-              Helps crews pinpoint the exact spot. Never required — the ward and landmark are enough on their own.
+              Helps crews pinpoint the exact spot and suggests the nearest council. Never required.
             </p>
           </div>
         </div>
@@ -307,7 +350,7 @@ export function ReportForm() {
           <p className="mt-1 text-xs text-bark/40">{values.description.trim().length}/20 characters minimum</p>
         </Field>
 
-        <Field label="Photo" htmlFor="photo" error={errors.photo}>
+        <Field label="Photo (optional)" htmlFor="photo" error={errors.photo}>
           <label
             htmlFor="photo"
             className="flex cursor-pointer items-center justify-between rounded-lg border border-dashed border-bark/20 bg-white px-4 py-3 text-sm text-bark/60 hover:border-pumpkin/40"
@@ -337,29 +380,33 @@ export function ReportForm() {
           <ol className="mt-3 space-y-3 text-sm text-bark/60">
             <li className="flex gap-2.5">
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pumpkin/15 text-xs font-bold text-pumpkin">1</span>
-              Gemini reads your report and assigns a priority + department.
+              Gemini reads your report and assigns a priority, and checks whether it is actually your
+              council&apos;s responsibility.
             </li>
             <li className="flex gap-2.5">
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pumpkin/15 text-xs font-bold text-pumpkin">2</span>
-              It appears on the public feed and the council&apos;s dashboard.
+              It appears on the public feed and the council&apos;s dashboard with a target response time.
             </li>
             <li className="flex gap-2.5">
               <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-pumpkin/15 text-xs font-bold text-pumpkin">3</span>
-              You earn +10 points now, +15 more when it&apos;s resolved.
+              You can check its status from My Reports, and confirm or dispute it once marked resolved.
             </li>
           </ol>
         </div>
         <div className="rounded-2xl bg-bark/5 p-5 text-xs leading-relaxed text-bark/50">
-          Your NIC is only used to identify your reports and stop duplicate/fake accounts. It
-          is not shown publicly on the feed.
+          Your NIC is only used to identify your reports and stop duplicate or fake accounts. It is
+          not shown publicly on the feed, and no password is ever created for your account.
         </div>
       </aside>
     </div>
   )
 }
 
+// text-base (16px) on mobile prevents iOS Safari auto-zooming on focus;
+// dropped back to text-sm at sm+ to match the rest of the desktop UI.
+// py-2.5 keeps every field a comfortable touch target on a phone.
 function inputClass(hasError: boolean) {
-  return `w-full rounded-lg border bg-white px-3 py-2 text-sm text-bark outline-none transition focus:ring-2 ${
+  return `w-full rounded-lg border bg-white px-3 py-2.5 text-base sm:text-sm text-bark outline-none transition focus:ring-2 ${
     hasError
       ? 'border-maple/50 focus:border-maple focus:ring-maple/20'
       : 'border-bark/15 focus:border-pumpkin focus:ring-pumpkin/20'

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { HeroIllustration } from '../components/HeroIllustration'
 
 const STEPS = [
   {
@@ -22,7 +23,7 @@ const STEPS = [
   },
   {
     title: 'Resolved',
-    body: 'Municipal engineers track, assign, and close it out on their dashboard, and you earn contribution points when they do.',
+    body: 'The Municipal Officer tracks, assigns, and closes it out against a public response time target, and you can confirm the fix yourself.',
     icon: (
       <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
@@ -32,9 +33,9 @@ const STEPS = [
 ]
 
 const STATS = [
-  { label: 'Categories covered', value: '4' },
+  { label: 'Categories covered', value: '8' },
   { label: 'Time to file', value: '< 2 min' },
-  { label: 'Sign-up required', value: 'None' },
+  { label: 'Councils in directory', value: '29' },
 ]
 
 const PROBLEM_AREAS = [
@@ -51,17 +52,16 @@ export function Home() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div>
-            <p className="inline-flex items-center gap-2 rounded-full bg-pumpkin/10 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-pumpkin">
-              Built for Sri Lanka
+            <p className="inline-flex items-center gap-2 rounded-full bg-bark/5 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-bark/70">
+              Civic reporting for Sri Lankan Municipal Councils
             </p>
             <h1 className="mt-6 text-4xl font-extrabold leading-tight tracking-tight text-bark sm:text-5xl">
-              Report a civic issue in your neighbourhood. No account needed.
+              Report a civic issue. See it through to resolution.
             </h1>
             <p className="mt-5 max-w-xl text-base leading-relaxed text-bark/70 sm:text-lg">
-              Garbage dumping, potholes, broken streetlights, burst pipes, blocked drains.
-              Residents across Sri Lanka have no reliable way to report these to their local
-              council, and no visibility once they do. Resolve LK gives every report a public,
-              tracked home, triaged automatically by AI.
+              Garbage dumping, potholes, broken streetlights, burst pipes, blocked drains. Every
+              report is triaged automatically, routed to the council actually responsible for it,
+              and tracked publicly against a stated response time, all without creating an account.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -79,8 +79,14 @@ export function Home() {
               >
                 Browse Reports
               </Link>
+              <Link
+                to="/councils"
+                className="rounded-lg px-6 py-3 text-sm font-semibold text-bark/60 transition hover:text-bark"
+              >
+                View the council directory
+              </Link>
             </div>
-            <dl className="mt-12 grid max-w-md grid-cols-3 gap-6 border-t border-bark/10 pt-8">
+            <dl className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-bark/10 pt-8">
               {STATS.map((stat) => (
                 <div key={stat.label}>
                   <dd className="text-2xl font-black text-bark">{stat.value}</dd>
@@ -90,48 +96,7 @@ export function Home() {
             </dl>
           </div>
 
-          <div className="relative">
-            <div className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-pumpkin/10 to-maple/5 blur-2xl"></div>
-            <div className="relative rounded-3xl border border-bark/10 bg-white/60 p-6 shadow-xl shadow-bark/5 backdrop-blur-sm sm:p-8">
-              <div className="flex items-center gap-3 border-b border-bark/10 pb-4">
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pumpkin text-white">
-                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </span>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-bark/50">Gemini AI</p>
-                  <p className="text-sm font-semibold text-bark">Automated Triage Result</p>
-                </div>
-              </div>
-              <div className="mt-6 space-y-5">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-bark/50 mb-1.5">Original Report</p>
-                  <p className="text-sm italic text-bark/80 bg-birch p-3 rounded-xl border border-bark/5">
-                    &ldquo;Massive pile of garbage near the school gates, mosquitos are breeding everywhere.&rdquo;
-                  </p>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-xl bg-maple/5 p-4 ring-1 ring-inset ring-maple/15">
-                    <p className="text-xs font-bold uppercase tracking-wider text-maple mb-1">Priority</p>
-                    <p className="text-lg font-black text-maple">Critical</p>
-                  </div>
-                  <div className="rounded-xl bg-golden/5 p-4 ring-1 ring-inset ring-golden/15">
-                    <p className="text-xs font-bold uppercase tracking-wider text-golden mb-1">Department</p>
-                    <p className="text-sm font-bold text-bark">Public Health</p>
-                  </div>
-                </div>
-
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-bark/50 mb-1.5">AI Reasoning</p>
-                  <p className="text-sm text-bark/90">
-                    Dengue outbreak risk near a school zone requires immediate clearance and health inspection.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <HeroIllustration />
         </div>
       </section>
 

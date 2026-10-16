@@ -1,5 +1,5 @@
 -- 001_init_schema.sql
--- Resolve LK — initial schema: profiles, civic_issues, triggers, RLS.
+-- Resolve LK - initial schema: profiles, civic_issues, triggers, RLS.
 -- Run in the Supabase SQL editor (Project → SQL Editor → New query), in
 -- order, before 002_points_rpc_and_search_indexes.sql.
 -- See docs/srs/05-data-model.md for the rationale behind each decision here.
@@ -26,11 +26,11 @@ create policy "users can view own profile"
   on profiles for select
   using (auth.uid() = id);
 
--- Auto-create a profile row whenever a new auth user is created — whether
+-- Auto-create a profile row whenever a new auth user is created - whether
 -- that's the backend auto-provisioning a citizen from their NIC on first
 -- report (supabaseAdmin.auth.admin.createUser), or an admin account created
 -- by hand in the Supabase dashboard. full_name/nic come from user_metadata.
--- Public reporting always lands here as 'citizen' — admin role is granted
+-- Public reporting always lands here as 'citizen' - admin role is granted
 -- manually afterwards (see the UPDATE statement at the bottom).
 create or replace function public.handle_new_user()
 returns trigger as $$
@@ -97,7 +97,7 @@ create policy "citizens_select_own"
   using (auth.uid() = citizen_id);
 
 -- Citizens can insert their own issues.
--- (Defense in depth — normal writes go through the backend's service role
+-- (Defense in depth - normal writes go through the backend's service role
 -- key, which bypasses RLS entirely. This policy protects any direct writes.)
 create policy "citizens_insert_own"
   on civic_issues for insert
@@ -124,7 +124,6 @@ create policy "admins_update_all"
   );
 
 -- =========================================================
--- Promote a user to admin (run manually, once, per admin account —
--- there is no admin self-registration anywhere in this system)
+-- Promote a user to admin (run manually, once, per admin account - -- there is no admin self-registration anywhere in this system)
 -- =========================================================
 -- update profiles set role = 'admin' where id = '<the admin user''s uuid>';

@@ -1,4 +1,4 @@
-// Mirrors backend/src/validation/issues.js and backend/src/lib/nic.js.
+// Mirrors backend/src/validation/issuesValidation.js and backend/src/lib/nic.js.
 // Keep both in sync if the rules change.
 
 const NIC_REGEX = /^([0-9]{9}[VvXx]|[0-9]{12})$/
@@ -14,8 +14,9 @@ export function isValidEmail(email: string) {
 
 export interface ReportFormValues {
   nic: string
-  email: string
+  contactEmail: string
   category: string
+  councilId: string
   ward: string
   landmark: string
   description: string
@@ -23,24 +24,24 @@ export interface ReportFormValues {
 
 export type ReportFormErrors = Partial<Record<keyof ReportFormValues, string>> & { photo?: string }
 
-export function validateReportForm(values: ReportFormValues, hasPhoto: boolean): ReportFormErrors {
+// Photo is optional - see docs/srs/07-api-specification.md.
+export function validateReportForm(values: ReportFormValues): ReportFormErrors {
   const errors: ReportFormErrors = {}
-
-  if (!hasPhoto) {
-    errors.photo = 'Please attach a photo of the issue.'
-  }
 
   if (!values.nic || !isValidNic(values.nic)) {
     errors.nic = 'Please enter a valid NIC number: either 9 digits followed by V/X, or 12 digits.'
   }
-  if (!values.email || !isValidEmail(values.email)) {
-    errors.email = 'Please enter a valid email address. We use it to set up your account.'
+  if (!values.contactEmail || !isValidEmail(values.contactEmail)) {
+    errors.contactEmail = 'Please enter a valid email address - we use it to send you a one-time code if you check your report history.'
   }
   if (!values.category) {
     errors.category = 'Please select a category.'
   }
+  if (!values.councilId) {
+    errors.councilId = 'Please select the council responsible for this area.'
+  }
   if (!values.ward.trim()) {
-    errors.ward = 'Please select a ward/zone.'
+    errors.ward = 'Please enter a ward or area name.'
   }
   if (!values.landmark.trim()) {
     errors.landmark = 'Please describe the nearest landmark so crews can find the location.'

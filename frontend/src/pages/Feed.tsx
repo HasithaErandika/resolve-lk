@@ -1,9 +1,52 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { IssueCard } from '../components/IssueCard'
 import { IssueDetailModal } from '../components/IssueDetailModal'
 import { CATEGORIES, type CivicIssue, normalizeIssue } from '../types/issue'
+import { fetchCouncilStats } from '../lib/officerApi'
+import type { CouncilStats } from '../types/council'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8787'
+
+function TransparencyStats() {
+  const [stats, setStats] = useState<CouncilStats[]>([])
+
+  useEffect(() => {
+    void fetchCouncilStats().then(setStats)
+  }, [])
+
+  const summary = useMemo(() => {
+    const totalResolved = stats.reduce((sum, s) => sum + s.resolvedCount, 0)
+    const withinSla = stats.reduce((sum, s) => sum + Math.round(((s.resolvedWithinSlaPct ?? 0) / 100) * s.resolvedCount), 0)
+    const totalOpen = stats.reduce((sum, s) => sum + s.openCount, 0)
+    const resolutionHours = stats.filter((s) => s.avgResolutionHours != null).map((s) => s.avgResolutionHours as number)
+    const avgHours = resolutionHours.length > 0 ? Math.round(resolutionHours.reduce((a, b) => a + b, 0) / resolutionHours.length) : null
+
+    return {
+      slaPct: totalResolved > 0 ? Math.round((withinSla / totalResolved) * 100) : null,
+      totalOpen,
+      avgHours,
+    }
+  }, [stats])
+
+  if (stats.length === 0) return null
+
+  return (
+    <div className="mx-auto mt-8 grid max-w-2xl grid-cols-3 gap-3 text-center">
+      <div className="rounded-xl border border-bark/10 bg-white p-3">
+        <p className="text-lg font-extrabold text-bark">{summary.slaPct != null ? `${summary.slaPct}%` : 'N/A'}</p>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-bark/50">Resolved within target</p>
+      </div>
+      <div className="rounded-xl border border-bark/10 bg-white p-3">
+        <p className="text-lg font-extrabold text-bark">{summary.avgHours != null ? `${summary.avgHours}h` : 'N/A'}</p>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-bark/50">Average time to resolve</p>
+      </div>
+      <div className="rounded-xl border border-bark/10 bg-white p-3">
+        <p className="text-lg font-extrabold text-bark">{summary.totalOpen}</p>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-bark/50">Currently open</p>
+      </div>
+    </div>
+  )
+}
 
 export function Feed() {
   const [issues, setIssues] = useState<CivicIssue[]>([])
@@ -64,6 +107,8 @@ export function Feed() {
           <p className="mt-2 text-sm text-bark/60">Open to everyone. No login required.</p>
         </div>
 
+        <TransparencyStats />
+
         <div className="mx-auto mt-8 flex max-w-2xl flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
             <svg
@@ -82,13 +127,13 @@ export function Feed() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by keyword, landmark, or ward…"
-              className="w-full rounded-lg border border-bark/15 bg-white py-2.5 pl-10 pr-3 text-sm text-bark outline-none transition focus:border-pumpkin focus:ring-2 focus:ring-pumpkin/20"
+              className="w-full rounded-lg border border-bark/15 bg-white py-2.5 pl-10 pr-3 text-base sm:text-sm text-bark outline-none transition focus:border-pumpkin focus:ring-2 focus:ring-pumpkin/20"
             />
           </div>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="rounded-lg border border-bark/15 bg-white px-3 py-2.5 text-sm text-bark outline-none transition focus:border-pumpkin focus:ring-2 focus:ring-pumpkin/20"
+            className="rounded-lg border border-bark/15 bg-white px-3 py-2.5 text-base sm:text-sm text-bark outline-none transition focus:border-pumpkin focus:ring-2 focus:ring-pumpkin/20"
           >
             <option value="All">All categories</option>
             {CATEGORIES.map((c) => (

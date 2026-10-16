@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { uploadPhoto } from '../middleware/upload.js';
-import { requireAuth, attachProfile, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, attachProfile } from '../middleware/auth.js';
 import { AppError } from '../utils/AppError.js';
 import * as issuesController from '../controllers/issuesController.js';
 
@@ -17,4 +17,7 @@ issuesRouter.post('/', uploadPhoto, issuesController.createIssue);
 issuesRouter.get('/public', issuesController.listPublicIssues);
 issuesRouter.get('/', requireAuth, attachProfile, issuesController.listIssues);
 issuesRouter.get('/:id', requireAuth, attachProfile, issuesController.getIssue);
-issuesRouter.patch('/:id/status', requireAuth, attachProfile, requireAdmin, issuesController.updateIssueStatus);
+// No requireRole here: a valid transition can come from a Municipal Officer
+// (forward moves) or the reporting citizen (Resolved -> Verified/Reopened)
+// - services/issueService.js#updateIssueStatus enforces exactly which.
+issuesRouter.patch('/:id/status', requireAuth, attachProfile, issuesController.updateIssueStatus);

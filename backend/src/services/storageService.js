@@ -4,6 +4,8 @@ import { r2Client } from '../lib/r2Client.js';
 import { env } from '../config/env.js';
 
 export async function uploadIssuePhoto(file) {
+  if (!file) return null; // photo is optional - see docs/srs/07-api-specification.md
+
   const extension = (file.originalname.split('.').pop() || 'jpg').toLowerCase();
   const key = `civic-issues/${randomUUID()}.${extension}`;
 

@@ -1,5 +1,5 @@
 import type { CivicIssue } from '../types/issue'
-import { PriorityBadge, StatusBadge } from './Badge'
+import { PriorityBadge, StatusBadge, EscalatedBadge, RedirectBadge } from './Badge'
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('en-LK', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -23,6 +23,13 @@ export function IssueCard({ issue, onClick }: { issue: CivicIssue; onClick?: () 
       <h3 className="mt-2 font-semibold text-bark">{issue.ward}</h3>
       <p className="mt-0.5 text-sm text-bark/60">{issue.landmark}</p>
       <p className="mt-3 line-clamp-2 text-sm text-bark/70">{issue.description}</p>
+
+      {(issue.escalated || issue.aiJurisdiction === 'redirect') && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {issue.escalated && <EscalatedBadge />}
+          {issue.aiJurisdiction === 'redirect' && <RedirectBadge authority={issue.aiRedirectAuthority} />}
+        </div>
+      )}
 
       <div className="mt-4 flex items-center justify-between border-t border-bark/10 pt-3">
         <StatusBadge status={issue.status} />
